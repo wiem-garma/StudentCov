@@ -1,0 +1,29 @@
+﻿@{
+    ViewData["Title"] = "Accueil";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Bienvenue sur CovStudent</h1>
+    <p class="lead">Votre plateforme de covoiturage étudiant</p>
+
+    <div class="row mt-5">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Publier un trajet</h5>
+                    <p class="card-text">Partagez vos déplacements avec d'autres étudiants</p>
+                    <a asp-controller="Trip" asp-action="Create" class="btn btn-primary">Publier</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Trouver un trajet</h5>
+                    <p class="card-text">Recherchez des trajets disponibles</p>
+                    <a asp-controller="Trip" asp-action="Index" class="btn btn-success">Rechercher</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
