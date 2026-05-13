@@ -1,7 +1,8 @@
-﻿using CovStudent.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
+using CovStudent.Models;
+using CovStudent.ViewModels;
 
 namespace CovStudent.Controllers;
 
@@ -17,65 +18,153 @@ public class AccountController : Controller
     }
 
     [HttpGet]
-    public IActionResult Login(string? returnUrl = null)
-    {
-        ViewData["ReturnUrl"] = returnUrl;
-        return View();
-    }
+    [AllowAnonymous]
+    public IActionResult Login() => View();
 
     [HttpPost]
+    [AllowAnonymous]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
+    public async Task<IActionResult> Login(LoginViewModel model)
     {
-        if (ModelState.IsValid)
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+
+        if (user == null || user.IsBlocked)
         {
-            var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
-            if (result.Succeeded)
-            {
-                return RedirectToLocal(returnUrl);
-            }
-            else
-            {
-                ModelState.AddModelError(string.Empty, "Tentative de connexion invalide.");
-                return View(model);
-            }
+            ModelState.AddModelError("", user?.IsBlocked == true
+                ? "Votre compte est bloque. Contactez l'administration."
+                : "Login incorrect");
+            return View(model);
         }
+
+        var result = await _signInManager.PasswordSignInAsync(
+            model.Email,
+            model.Password,
+            model.RememberMe,
+            false);
+
+        if (result.Succeeded)
+        {
+            user.LastLoginDate = DateTime.Now;
+            await _userManager.UpdateAsync(user);
+            return RedirectToAction("Index", "Dashboard");
+        }
+
+        ModelState.AddModelError("", "Login incorrect");
         return View(model);
     }
 
     [HttpGet]
-    public IActionResult Register()
-    {
-        return View();
-    }
+    [AllowAnonymous]
+    public IActionResult Register() => View();
 
     [HttpPost]
+    [AllowAnonymous]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel model)
     {
-        if (ModelState.IsValid)
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var isFirstUser = !_userManager.Users.Any();
+
+        var user = new AppUser
         {
-            var user = new AppUser
-            {
-                UserName = model.Email,
-                Email = model.Email,
-                FullName = model.FullName,
-                RegistrationDate = DateTime.Now
-            };
+            UserName = model.Email,
+            Email = model.Email,
+            FirstName = model.FirstName,
+            LastName = model.LastName,
+            University = model.University,
+            PhoneNumber = model.PhoneNumber,
+            StudentId = model.StudentId,
+            RegistrationDate = DateTime.Now
+        };
 
-            var result = await _userManager.CreateAsync(user, model.Password);
-            if (result.Succeeded)
-            {
-                await _signInManager.SignInAsync(user, isPersistent: false);
-                return RedirectToAction("Index", "Home");
-            }
+        var result = await _userManager.CreateAsync(user, model.Password);
 
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
+        if (result.Succeeded)
+        {
+            if (isFirstUser)
+                await _userManager.AddToRoleAsync(user, "Admin");
+
+            await _signInManager.SignInAsync(user, false);
+            return RedirectToAction("Index", "Dashboard");
         }
+
+        foreach (var error in result.Errors)
+            ModelState.AddModelError("", error.Description);
+
         return View(model);
+    }
+
+    [Authorize]
+    public async Task<IActionResult> Profile()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+            return RedirectToAction(nameof(Login));
+
+        return View(user);
+    }
+
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> EditProfile()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+            return RedirectToAction(nameof(Login));
+
+        var model = new EditProfileViewModel
+        {
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email ?? string.Empty,
+            University = user.University,
+            PhoneNumber = user.PhoneNumber
+        };
+
+        return View(model);
+    }
+
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditProfile(EditProfileViewModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+            return RedirectToAction(nameof(Login));
+
+        user.FirstName = model.FirstName;
+        user.LastName = model.LastName;
+        user.Email = model.Email;
+        user.UserName = model.Email;
+        user.University = model.University;
+        user.PhoneNumber = model.PhoneNumber;
+
+        var result = await _userManager.UpdateAsync(user);
+
+        if (result.Succeeded)
+        {
+            TempData["SuccessMessage"] = "Profil mis a jour avec succes.";
+            return RedirectToAction(nameof(Profile));
+        }
+
+        foreach (var error in result.Errors)
+            ModelState.AddModelError("", error.Description);
+
+        return View(model);
+    }
+
+    public IActionResult AccessDenied()
+    {
+        return View();
     }
 
     [HttpPost]
@@ -83,56 +172,6 @@ public class AccountController : Controller
     public async Task<IActionResult> Logout()
     {
         await _signInManager.SignOutAsync();
-        return RedirectToAction("Index", "Home");
+        return RedirectToAction(nameof(Login));
     }
-
-    private IActionResult RedirectToLocal(string? returnUrl)
-    {
-        if (Url.IsLocalUrl(returnUrl))
-        {
-            return Redirect(returnUrl);
-        }
-        else
-        {
-            return RedirectToAction("Index", "Home");
-        }
-    }
-}
-
-// ViewModels pour AccountController
-public class LoginViewModel
-{
-    [Required]
-    [EmailAddress]
-    public string Email { get; set; } = string.Empty;
-
-    [Required]
-    [DataType(DataType.Password)]
-    public string Password { get; set; } = string.Empty;
-
-    [Display(Name = "Se souvenir de moi")]
-    public bool RememberMe { get; set; }
-}
-
-public class RegisterViewModel
-{
-    [Required]
-    [EmailAddress]
-    [Display(Name = "Email")]
-    public string Email { get; set; } = string.Empty;
-
-    [Required]
-    [StringLength(100, ErrorMessage = "Le {0} doit avoir au moins {2} caractères.", MinimumLength = 3)]
-    [DataType(DataType.Password)]
-    [Display(Name = "Mot de passe")]
-    public string Password { get; set; } = string.Empty;
-
-    [DataType(DataType.Password)]
-    [Display(Name = "Confirmer le mot de passe")]
-    [Compare("Password", ErrorMessage = "Les mots de passe ne correspondent pas.")]
-    public string ConfirmPassword { get; set; } = string.Empty;
-
-    [Required]
-    [Display(Name = "Nom complet")]
-    public string FullName { get; set; } = string.Empty;
 }

@@ -1,15 +1,16 @@
 ﻿using CovStudent.Models;
+
 namespace CovStudent.Services;
 
 public interface ITripService
 {
-    IEnumerable<Trip> GetAllTrips();
-    IEnumerable<Trip> GetAvailableTrips();
-    IEnumerable<Trip> GetTripsByDriver(string driverId);
-    IEnumerable<Trip> SearchTrips(string departure, string destination, DateTime? date);
-    Trip? GetTripById(int id);
-    void AddTrip(Trip trip);
-    void UpdateTrip(Trip trip);
-    void DeleteTrip(int id);
-    bool HasAvailableSeats(int tripId, int requestedSeats);
+    Task<IEnumerable<Trip>> GetAllTripsAsync();
+    Task<IEnumerable<Trip>> GetAvailableTripsAsync();
+    Task<IEnumerable<Trip>> GetTripsByDriverAsync(string driverId);
+    Task<IEnumerable<Trip>> SearchTripsAsync(string? departure, string? destination, DateTime? date);
+    Task<Trip?> GetTripByIdAsync(int id);
+    Task AddTripAsync(Trip trip);
+    Task UpdateTripAsync(Trip trip);
+    Task DeleteTripAsync(int id);
+    Task<bool> HasAvailableSeatsAsync(int tripId, int requestedSeats);
 }

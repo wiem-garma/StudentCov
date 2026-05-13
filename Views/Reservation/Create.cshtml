@@ -1,0 +1,354 @@
+@model CovStudent.Models.Reservation
+
+@{
+    ViewData["Title"] = "Reserver";
+    var trip = ViewBag.Trip as CovStudent.Models.Trip;
+    var bookedSeats = trip?.Reservations?.Where(r => r.Status != ReservationStatus.Cancelled).Sum(r => r.NumberOfSeats) ?? 0;
+    var remainingSeats = trip == null ? 0 : Math.Max(0, trip.AvailableSeats - bookedSeats);
+}
+
+<style>
+    .reservation-container {
+        background: linear-gradient(135deg, rgba(19,111,99,0.05), rgba(107,94,168,0.05));
+        padding: 40px 20px;
+        min-height: 100vh;
+    }
+
+    .reservation-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 35px rgba(0,0,0,0.08);
+    }
+
+    .reservation-header {
+        background: linear-gradient(135deg, #136f63, #0d5148);
+        color: white;
+        padding: 30px;
+    }
+
+    .reservation-header-eyebrow {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.85;
+        margin-bottom: 8px;
+    }
+
+    .reservation-header-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .reservation-body {
+        padding: 30px;
+    }
+
+    .route-card {
+        background: linear-gradient(135deg, rgba(19,111,99,0.08), rgba(107,94,168,0.08));
+        border: 1px solid rgba(19,111,99,0.15);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+
+    .route-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .route-header-route {
+        font-size: 16px;
+        font-weight: 700;
+        color: #202124;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .route-header-price {
+        background: linear-gradient(135deg, #d99a2b, #e8c97a);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+    .route-details {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #68706a;
+        font-size: 14px;
+    }
+
+    .reservation-form {
+        background: #f8f9fa;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 700;
+        color: #202124;
+        margin-bottom: 10px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .form-group label i {
+        color: #d99a2b;
+    }
+
+    .form-control {
+        border-radius: 10px;
+        border: 1.5px solid #e5e5e5;
+        padding: 12px 14px;
+        font-size: 15px;
+        transition: 0.2s ease;
+    }
+
+    .form-control:focus {
+        border-color: #136f63;
+        box-shadow: 0 0 0 3px rgba(19,111,99,0.1);
+        outline: none;
+    }
+
+    .form-control-lg {
+        padding: 14px 16px;
+        font-size: 16px;
+    }
+
+    .validation-error {
+        color: #b9473c;
+        font-size: 12px;
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .metrics-summary {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin: 20px 0;
+    }
+
+    .metric-box {
+        background: white;
+        border: 1px solid #e5e5e5;
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+    }
+
+    .metric-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #68706a;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .metric-value {
+        font-size: 22px;
+        font-weight: 700;
+        color: #136f63;
+    }
+
+    .metric-total {
+        color: #d99a2b;
+        font-size: 20px;
+    }
+
+    .available-indicator {
+        background: #e7f5f5;
+        border-left: 4px solid #136f63;
+        padding: 12px;
+        border-radius: 8px;
+        color: #136f63;
+        font-size: 13px;
+        font-weight: 600;
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .reservation-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 25px;
+    }
+
+    .reservation-actions .btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: 0.2s ease;
+        flex: 1;
+        max-width: 200px;
+    }
+
+    .not-found {
+        background: linear-gradient(135deg, rgba(185,71,60,0.08), rgba(230,45,61,0.08));
+        border-left: 4px solid #b9473c;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        color: #b9473c;
+    }
+
+    .not-found i {
+        font-size: 36px;
+        margin-bottom: 12px;
+        opacity: 0.8;
+    }
+
+    .not-found p {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0;
+    }
+</style>
+
+<div class="reservation-container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="reservation-card">
+                <div class="reservation-header">
+                    <div class="reservation-header-eyebrow">
+                        <i class="fas fa-ticket-alt me-1"></i>Sécuriser votre trajet
+                    </div>
+                    <h1 class="reservation-header-title">Réserver une place</h1>
+                </div>
+
+                <div class="reservation-body">
+                    @if (trip == null)
+                    {
+                        <div class="not-found">
+                            <i class="fas fa-map-location-dot"></i>
+                            <p>Trajet introuvable</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="route-card">
+                            <div class="route-header">
+                                <div class="route-header-route">
+                                    <i class="fas fa-arrow-right" style="color: #136f63;"></i>
+                                    @trip.Departure → @trip.Destination
+                                </div>
+                                <div class="route-header-price">
+                                    @trip.PricePerSeat.ToString("0.00") TND/place
+                                </div>
+                            </div>
+                            <div class="route-details">
+                                <i class="fas fa-calendar"></i>
+                                @trip.DepartureTime.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        </div>
+
+                        <form asp-action="Create" method="post" class="reservation-form">
+                            <input type="hidden" asp-for="TripId" />
+                            
+                            @if (ViewData.ModelState[""]?.Errors.Count > 0)
+                            {
+                                <div style="background: #ffebee; border-left: 4px solid #b9473c; border-radius: 8px; padding: 12px; margin-bottom: 15px; color: #b9473c; font-size: 13px; font-weight: 600;">
+                                    <i class="fas fa-exclamation-circle me-2"></i>Veuillez vérifier vos informations
+                                </div>
+                            }
+
+                            <div class="form-group">
+                                <label asp-for="NumberOfSeats">
+                                    <i class="fas fa-users"></i>Nombre de places
+                                </label>
+                                <input asp-for="NumberOfSeats" type="number" min="1" max="@remainingSeats" value="1" class="form-control form-control-lg" placeholder="Sélectionnez le nombre de places" />
+                                <span asp-validation-for="NumberOfSeats" class="validation-error">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                </span>
+                            </div>
+
+                            <div class="metrics-summary">
+                                <div class="metric-box">
+                                    <div class="metric-label">Places restantes</div>
+                                    <div class="metric-value">@remainingSeats</div>
+                                    <small style="color: #68706a;">sur @trip.AvailableSeats</small>
+                                </div>
+                                <div class="metric-box">
+                                    <div class="metric-label">Total estimé</div>
+                                    <div class="metric-total" id="reservationTotal">
+                                        @trip.PricePerSeat.ToString("0.00") TND
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if (remainingSeats <= 0)
+                            {
+                                <div class="available-indicator" style="background: #ffe5e5; border-left-color: #b9473c; color: #b9473c;">
+                                    <i class="fas fa-times-circle"></i>
+                                    <span>Toutes les places sont réservées</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="available-indicator">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>@remainingSeats place(s) disponible(s)</span>
+                                </div>
+                            }
+
+                            <div class="reservation-actions">
+                                <a asp-controller="Trip" asp-action="Details" asp-route-id="@trip.Id" class="btn btn-outline-dark">
+                                    <i class="fas fa-arrow-left me-2"></i>Retour
+                                </a>
+                                <button type="submit" class="btn btn-dark" @(remainingSeats <= 0 ? "disabled" : "")>
+                                    <i class="fas fa-check me-2"></i>Envoyer la demande
+                                </button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    @if (trip != null)
+    {
+        <script>
+            (() => {
+                const price = @trip.PricePerSeat.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                const input = document.querySelector('[name="NumberOfSeats"]');
+                const total = document.getElementById('reservationTotal');
+                const update = () => {
+                    const seats = Math.max(1, Number(input?.value || 1));
+                    total.textContent = `${(seats * price).toFixed(2)} TND`;
+                };
+                input?.addEventListener('input', update);
+                update();
+            })();
+        </script>
+    }
+}

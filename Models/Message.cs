@@ -19,15 +19,19 @@ public class Message
     public string Content { get; set; } = string.Empty;
 
     public DateTime SentAt { get; set; } = DateTime.Now;
+
     public bool IsRead { get; set; } = false;
+
+    public bool IsDeleted { get; set; } = false;
+
     public int? TripId { get; set; }
 
-    [ForeignKey("SenderId")]
-    public virtual AppUser? Sender { get; set; }  // ← AppUser
+    [ForeignKey(nameof(SenderId))]
+    public virtual AppUser? Sender { get; set; }
 
-    [ForeignKey("ReceiverId")]
-    public virtual AppUser? Receiver { get; set; }  // ← AppUser
+    [ForeignKey(nameof(ReceiverId))]
+    public virtual AppUser? Receiver { get; set; }
 
-    [ForeignKey("TripId")]
+    [ForeignKey(nameof(TripId))]
     public virtual Trip? Trip { get; set; }
 }

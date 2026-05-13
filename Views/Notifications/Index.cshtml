@@ -1,0 +1,191 @@
+﻿@model IEnumerable<CovStudent.Models.Notification>
+
+@{
+    ViewData["Title"] = "Notifications";
+    var notifications = Model ?? Enumerable.Empty<CovStudent.Models.Notification>();
+    var returnUrl = ViewContext.HttpContext.Request.Path + ViewContext.HttpContext.Request.QueryString;
+}
+
+<style>
+    .notifications-header {
+        background: linear-gradient(135deg, rgba(19,111,99,0.1), rgba(107,94,168,0.1));
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+
+    .eyebrow {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #68706a;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .page-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: #202124;
+        margin-top: 4px !important;
+        margin-bottom: 0 !important;
+    }
+
+    .app-card {
+        border-radius: 16px;
+        overflow: hidden;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        background: white;
+        padding: 24px;
+    }
+
+    .notification-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .notification-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 16px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border-left: 4px solid #136f63;
+        transition: 0.2s ease;
+    }
+
+    .notification-item.is-unread {
+        background: #e7f5f5;
+        border-left-color: #d99a2b;
+    }
+
+    .notification-item:hover {
+        box-shadow: 0 4px 12px rgba(19,111,99,0.1);
+    }
+
+    .notification-item h2 {
+        font-size: 15px;
+        font-weight: 700;
+        color: #202124;
+        margin: 0 0 6px 0;
+    }
+
+    .notification-item p {
+        font-size: 13px;
+        color: #68706a;
+        margin: 0 0 8px 0;
+    }
+
+    .notification-item small {
+        font-size: 12px;
+        color: #999;
+    }
+
+    .notification-item .btn {
+        border-radius: 6px;
+        padding: 8px 14px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .badge.text-bg-warning {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 80px 40px;
+    }
+
+    .empty-state i {
+        font-size: 48px;
+        color: #68706a;
+        opacity: 0.3;
+        margin-bottom: 20px;
+    }
+
+    .empty-state h2 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #202124;
+        margin: 0 0 10px 0;
+    }
+
+    .empty-state p {
+        color: #68706a;
+        font-size: 13px;
+    }
+</style>
+
+<div class="page-shell page-shell-wide">
+    <section class="notifications-header page-hero">
+        <div>
+            <span class="eyebrow"><i class="fas fa-bell"></i> Centre de notifications</span>
+            <h1 class="page-title">Notifications</h1>
+            <p class="hero-subtitle">Retrouvez ici les réservations, messages et mises à jour liées à votre activité.</p>
+        </div>
+        <span class="reservation-count">@notifications.Count() notification(s)</span>
+    </section>
+
+    <section class="app-card">
+        @if (!notifications.Any())
+        {
+            <div class="empty-state">
+                <i class="fas fa-bell-slash"></i>
+                <h2>Aucune notification</h2>
+                <p>Vous n’avez pas encore reçu de mise à jour.</p>
+            </div>
+        }
+        else
+        {
+            <div class="notification-list">
+                @foreach (var notification in notifications)
+                {
+                    var isUnread = !notification.IsRead;
+                    <article class="notification-item @(isUnread ? "is-unread" : string.Empty)">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                <h2>@notification.Title</h2>
+                                @if (isUnread)
+                                {
+                                    <span class="badge text-bg-warning">Non lue</span>
+                                }
+                            </div>
+                            <p>@notification.Body</p>
+                            <small>@notification.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                        </div>
+
+                        <div class="d-flex gap-2 flex-wrap">
+                            @if (!string.IsNullOrWhiteSpace(notification.Link))
+                            {
+                                <a href="@notification.Link" class="btn btn-dark btn-sm">Voir</a>
+                            }
+
+                            @if (!notification.IsRead)
+                            {
+                                <form asp-action="MarkAsRead" method="post" class="m-0">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@notification.Id" />
+                                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                    <button type="submit" class="btn btn-outline-dark btn-sm">Marquer comme lue</button>
+                                </form>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+</div>

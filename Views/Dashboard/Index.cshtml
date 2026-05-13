@@ -1,0 +1,221 @@
+@using CovStudent.Models
+@model CovStudent.ViewModels.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Tableau de bord";
+}
+
+<div class="page-shell">
+    <section class="page-hero page-hero-dark dashboard-hero">
+        <div class="dashboard-hero-copy">
+            <div>
+                <span class="eyebrow"><i class="fas fa-gauge-high"></i> Tableau de bord</span>
+                <h1 class="page-title">Bonjour, @(Model.FullName ?? "Utilisateur")</h1>
+                <p class="hero-subtitle">
+                    Pilotez vos trajets, vos réservations et vos conversations depuis un centre de commande plus lisible.
+                </p>
+            </div>
+
+            <div class="dashboard-tags">
+                <span class="dashboard-tag"><i class="fas fa-route"></i>@Model.MyTripsCount trajets</span>
+                <span class="dashboard-tag"><i class="fas fa-ticket-alt"></i>@Model.MyReservationsCount réservations</span>
+                @if (!string.IsNullOrWhiteSpace(Model.University))
+                {
+                    <span class="dashboard-tag"><i class="fas fa-graduation-cap"></i>@Model.University</span>
+                }
+            </div>
+        </div>
+
+        <div class="dashboard-hero-card">
+            <span class="dashboard-hero-card-label">Vue instantanée</span>
+
+            <div class="dashboard-hero-kpis">
+                <div class="dashboard-mini-kpi">
+                    <span>En attente</span>
+                    <strong>@Model.PendingReservationsCount</strong>
+                </div>
+                <div class="dashboard-mini-kpi">
+                    <span>Terminés</span>
+                    <strong>@Model.CompletedTripsCount</strong>
+                </div>
+            </div>
+
+            <a asp-controller="Trip" asp-action="Create" class="btn btn-auth w-100">
+                <i class="fas fa-plus me-2"></i>Publier un trajet
+            </a>
+        </div>
+    </section>
+
+    <section class="stats-grid mb-4">
+        <article class="stat-card">
+            <h6>Mes trajets</h6>
+            <h2>@Model.MyTripsCount</h2>
+            <i class="fas fa-route stat-icon"></i>
+        </article>
+        <article class="stat-card">
+            <h6>Réservations</h6>
+            <h2>@Model.MyReservationsCount</h2>
+            <i class="fas fa-ticket-alt stat-icon"></i>
+        </article>
+        <article class="stat-card">
+            <h6>En attente</h6>
+            <h2>@Model.PendingReservationsCount</h2>
+            <i class="fas fa-clock stat-icon"></i>
+        </article>
+        <article class="stat-card">
+            <h6>Terminés</h6>
+            <h2>@Model.CompletedTripsCount</h2>
+            <i class="fas fa-check-circle stat-icon"></i>
+        </article>
+    </section>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <section class="surface-card dashboard-section-card h-100">
+                <div class="dashboard-section-head">
+                    <div>
+                        <span class="eyebrow"><i class="fas fa-bolt"></i> Actions rapides</span>
+                        <h2 class="section-title mb-0">Gérer vos trajets sans détour</h2>
+                    </div>
+                </div>
+
+                <div class="quick-actions-grid">
+                    <a asp-controller="Trip" asp-action="Create" class="quick-action">
+                        <i class="fas fa-plus"></i>
+                        <span>
+                            <strong>Publier</strong>
+                            <span>Nouveau trajet</span>
+                        </span>
+                    </a>
+                    <a asp-controller="Trip" asp-action="Index" class="quick-action">
+                        <i class="fas fa-search"></i>
+                        <span>
+                            <strong>Trouver</strong>
+                            <span>Rechercher une place</span>
+                        </span>
+                    </a>
+                    <a asp-controller="Dashboard" asp-action="MyTrips" class="quick-action">
+                        <i class="fas fa-car-side"></i>
+                        <span>
+                            <strong>Mes trajets</strong>
+                            <span>Suivre les publications</span>
+                        </span>
+                    </a>
+                    <a asp-controller="Dashboard" asp-action="MyReservations" class="quick-action">
+                        <i class="fas fa-ticket"></i>
+                        <span>
+                            <strong>Réservations</strong>
+                            <span>Demandes envoyées</span>
+                        </span>
+                    </a>
+                    <a asp-controller="Dashboard" asp-action="ReceivedReservations" class="quick-action">
+                        <i class="fas fa-inbox"></i>
+                        <span>
+                            <strong>Demandes</strong>
+                            <span>Réservations reçues</span>
+                        </span>
+                    </a>
+                    <a asp-controller="Message" asp-action="Conversations" class="quick-action">
+                        <i class="fas fa-comments"></i>
+                        <span>
+                            <strong>Messages</strong>
+                            <span>Conversations</span>
+                        </span>
+                    </a>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-5">
+            <section class="surface-card dashboard-section-card h-100">
+                <div class="dashboard-section-head">
+                    <div>
+                        <span class="eyebrow"><i class="fas fa-clock-rotate-left"></i> Activité récente</span>
+                        <h2 class="section-title mb-0">Dernières réservations</h2>
+                    </div>
+                </div>
+
+                @if (Model.RecentReservations == null || !Model.RecentReservations.Any())
+                {
+                    <div class="empty-inline">Aucune réservation récente pour le moment.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle app-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Trajet</th>
+                                    <th>Total</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var reservation in Model.RecentReservations)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@(reservation.Trip?.Departure ?? "-")</strong>
+                                            <span class="text-muted d-block small">@(reservation.Trip?.Destination ?? "-")</span>
+                                        </td>
+                                        <td>@reservation.TotalPrice.ToString("0.00") TND</td>
+                                        <td><span class="status-pill status-@reservation.Status.ToString().ToLowerInvariant()">@reservation.Status</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        </div>
+    </div>
+
+    <section class="surface-card dashboard-section-card mt-4">
+        <div class="dashboard-section-head">
+            <div>
+                <span class="eyebrow"><i class="fas fa-wand-magic-sparkles"></i> Suggestions</span>
+                <h2 class="section-title mb-0">Trajets qui peuvent vous intéresser</h2>
+            </div>
+            <a asp-controller="Trip" asp-action="Index" class="btn btn-outline-dark btn-sm">
+                <i class="fas fa-map-location-dot"></i>Voir tous les trajets
+            </a>
+        </div>
+
+        <div class="row g-3" id="smartSuggestions">
+            <div class="col-12">
+                <div class="empty-inline">Chargement des suggestions...</div>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const target = document.getElementById('smartSuggestions');
+            if (!target) return;
+
+            fetch('@Url.Action("GetSmartSuggestions", "Trip")')
+                .then(response => response.json())
+                .then(payload => {
+                    if (!payload.success || !payload.data?.length) {
+                        target.innerHTML = '<div class="col-12"><div class="empty-inline">Aucune suggestion pour le moment.</div></div>';
+                        return;
+                    }
+
+                    target.innerHTML = payload.data.map(item => `
+                        <div class="col-md-4">
+                            <a class="suggestion-card" href="/Trip/Details/${item.id}">
+                                <span>${item.reason}</span>
+                                <strong>${item.route}</strong>
+                                <small>${item.time} - ${item.driver}</small>
+                            </a>
+                        </div>
+                    `).join('');
+                })
+                .catch(() => {
+                    target.innerHTML = '<div class="col-12"><div class="empty-inline">Suggestions indisponibles.</div></div>';
+                });
+        })();
+    </script>
+}

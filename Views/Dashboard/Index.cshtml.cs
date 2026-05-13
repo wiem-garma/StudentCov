@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace CovStudent.Views.Shared
+namespace CovStudent.Views.Dashboard
 {
-    public class _ValidationScriptsPartialModel : PageModel
+    public class IndexModel : PageModel
     {
         public void OnGet()
         {

@@ -1,0 +1,164 @@
+@model CovStudent.ViewModels.RegisterViewModel
+
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Inscription";
+}
+
+<div class="auth-scene">
+    <section class="auth-story">
+        <div>
+            <span class="eyebrow"><i class="fas fa-users"></i> Communauté CovStudent</span>
+            <h1>Créez votre profil étudiant et commencez à partager vos trajets.</h1>
+            <p>Un compte vous permet de publier un trajet, réserver une place, recevoir des notifications et discuter avec les autres membres.</p>
+        </div>
+
+        <div class="auth-mini-grid">
+            <div class="auth-mini-card">
+                <i class="fas fa-shield-halved"></i>
+                <strong>Profil clair</strong>
+                <span>Nom, université et contact utiles.</span>
+            </div>
+            <div class="auth-mini-card">
+                <i class="fas fa-clock"></i>
+                <strong>Suivi simple</strong>
+                <span>Réservations et demandes centralisées.</span>
+            </div>
+            <div class="auth-mini-card">
+                <i class="fas fa-bell"></i>
+                <strong>Alertes</strong>
+                <span>Notifications pour les actions importantes.</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="auth-panel">
+        <div class="auth-panel-header">
+            <span class="auth-icon"><i class="fas fa-user-plus"></i></span>
+            <h2>Créer un compte</h2>
+            <p>Renseignez vos informations pour rejoindre CovStudent.</p>
+        </div>
+
+        <form asp-action="Register" method="post" id="registerForm">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+            <div class="form-grid-2">
+                <div class="mb-3">
+                    <label asp-for="FirstName" class="form-label">Prénom</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        <input asp-for="FirstName" class="form-control" placeholder="Jean" autocomplete="given-name" />
+                    </div>
+                    <span asp-validation-for="FirstName" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="LastName" class="form-label">Nom</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        <input asp-for="LastName" class="form-control" placeholder="Dupont" autocomplete="family-name" />
+                    </div>
+                    <span asp-validation-for="LastName" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Adresse email</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                    <input asp-for="Email" class="form-control" placeholder="exemple@email.com" autocomplete="email" />
+                </div>
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+
+            <div class="form-grid-2">
+                <div class="mb-3">
+                    <label asp-for="PhoneNumber" class="form-label">Téléphone</label>
+                    <div class="input-group">
+                        <span class="input-group-text">+216</span>
+                        <input asp-for="PhoneNumber" class="form-control" placeholder="12345678" autocomplete="tel" />
+                    </div>
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="StudentId" class="form-label">Numéro étudiant</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-id-card"></i></span>
+                        <input asp-for="StudentId" class="form-control" placeholder="Optionnel" />
+                    </div>
+                    <span asp-validation-for="StudentId" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="University" class="form-label">Université</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-university"></i></span>
+                    <input asp-for="University" class="form-control" placeholder="Université de Carthage" />
+                </div>
+                <span asp-validation-for="University" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">Mot de passe</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    <input asp-for="Password" type="password" id="password" class="form-control" placeholder="Au moins 3 caractères" autocomplete="new-password" />
+                    <button class="input-action" type="button" data-password-toggle="password" aria-label="Afficher le mot de passe">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ConfirmPassword" class="form-label">Confirmer le mot de passe</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-check"></i></span>
+                    <input asp-for="ConfirmPassword" type="password" id="confirmPassword" class="form-control" placeholder="Répétez le mot de passe" autocomplete="new-password" />
+                    <button class="input-action" type="button" data-password-toggle="confirmPassword" aria-label="Afficher le mot de passe">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+            </div>
+
+            <button type="submit" class="btn btn-auth w-100" id="registerBtn">
+                <i class="fas fa-user-plus me-2"></i>S'inscrire
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Déjà inscrit ?
+            <a asp-action="Login">Se connecter</a>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        document.querySelectorAll('[data-password-toggle]').forEach(button => {
+            button.addEventListener('click', () => {
+                const input = document.getElementById(button.dataset.passwordToggle);
+                const icon = button.querySelector('i');
+                const isHidden = input?.type === 'password';
+                if (!input || !icon) return;
+
+                input.type = isHidden ? 'text' : 'password';
+                icon.classList.toggle('fa-eye', !isHidden);
+                icon.classList.toggle('fa-eye-slash', isHidden);
+            });
+        });
+
+        document.getElementById('registerForm')?.addEventListener('submit', () => {
+            const btn = document.getElementById('registerBtn');
+            if (!btn) return;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i>Création...';
+            btn.disabled = true;
+        });
+    </script>
+}

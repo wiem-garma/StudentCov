@@ -1,0 +1,290 @@
+@using System.Security.Claims
+@model CovStudent.Models.Trip
+
+@{
+    ViewData["Title"] = "Detail du trajet";
+
+    var currentUserId = ViewBag.CurrentUserId as string;
+    var userReservation = ViewBag.UserReservation as CovStudent.Models.Reservation;
+    var driverReviews = ViewBag.DriverReviews as IEnumerable<CovStudent.Models.Review> ?? Enumerable.Empty<CovStudent.Models.Review>();
+    var driverRating = ViewBag.DriverRating is double rating ? rating : 0;
+    var hasReviewed = ViewBag.HasReviewed is bool reviewed && reviewed;
+    var isDriver = currentUserId == Model.DriverId;
+    var bookedSeats = Model.Reservations.Where(r => r.Status != ReservationStatus.Cancelled).Sum(r => r.NumberOfSeats);
+    var remainingSeats = Math.Max(0, Model.AvailableSeats - bookedSeats);
+
+    string ReservationBadge(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Pending => "badge text-bg-warning",
+        ReservationStatus.Confirmed => "badge text-bg-success",
+        ReservationStatus.Cancelled => "badge text-bg-danger",
+        ReservationStatus.Completed => "badge text-bg-secondary",
+        _ => "badge text-bg-dark"
+    };
+}
+
+<div class="container py-4">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success app-alert"><i class="fas fa-check-circle me-2"></i>@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger app-alert"><i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]</div>
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="trip-header">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="eyebrow" style="color: rgba(255,255,255,0.78);">
+                            <i class="fas fa-car me-1"></i>Trajet CovStudent
+                        </div>
+                        <div class="trip-title">@Model.Departure → @Model.Destination</div>
+                        <div class="trip-subtitle">
+                            <i class="fas fa-calendar me-2"></i>@Model.DepartureTime.ToString("dd/MM/yyyy HH:mm")
+                            @if (Model.ArrivalTime.HasValue)
+                            {
+                                <span><i class="fas fa-arrow-right mx-2"></i>@Model.ArrivalTime.Value.ToString("HH:mm")</span>
+                            }
+                        </div>
+                    </div>
+                    <span class="status-badge">@Model.Status</span>
+                </div>
+            </div>
+
+            <section class="app-card p-4">
+                <div class="route-timeline">
+                    <div class="route-point">
+                        <div class="route-marker"><i class="fas fa-map-pin"></i></div>
+                        <div class="route-info">
+                            <strong>@Model.Departure</strong>
+                            <small>Départ</small>
+                        </div>
+                    </div>
+                    <div class="route-point">
+                        <div class="route-marker"><i class="fas fa-flag-checkered"></i></div>
+                        <div class="route-info">
+                            <strong>@Model.Destination</strong>
+                            <small>Destination</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Places restantes</div>
+                        <div class="metric-value">@remainingSeats</div>
+                        <small style="color: #68706a;">sur @Model.AvailableSeats</small>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Prix par place</div>
+                        <div class="metric-price">@Model.PricePerSeat.ToString("0.00") TND</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Rendez-vous</div>
+                        <div style="font-weight: 800; color: #202124; font-size: 14px;">
+                            @(string.IsNullOrWhiteSpace(Model.MeetingPoint) ? "À préciser" : Model.MeetingPoint)
+                        </div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <div class="details-section">
+                        <h3><i class="fas fa-file-lines me-2" style="color: #d99a2b;"></i>Détails du trajet</h3>
+                        <p>@Model.Description</p>
+                    </div>
+                }
+            </section>
+
+            @if (isDriver)
+            {
+                <section class="app-card p-4 mt-4">
+                    <div class="reservations-header">
+                        <h3><i class="fas fa-ticket-alt me-2" style="color: #d99a2b;"></i>Réservations reçues</h3>
+                        <span class="reservation-count">@Model.Reservations.Count réservation(s)</span>
+                    </div>
+
+                    @if (!Model.Reservations.Any())
+                    {
+                        <div style="text-align: center; padding: 30px; color: #68706a;">
+                            <i class="fas fa-inbox fa-2x mb-3" style="opacity: 0.5;"></i>
+                            <p>Aucune réservation pour ce trajet.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="overflow-x: auto;">
+                            <table class="reservation-table">
+                                <thead>
+                                    <tr>
+                                        <th>Passager</th>
+                                        <th>Places</th>
+                                        <th>Total</th>
+                                        <th>Statut</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var reservation in Model.Reservations.OrderByDescending(r => r.ReservationDate))
+                                    {
+                                        <tr>
+                                            <td class="passenger-name">@(reservation.Passenger?.FullName ?? "Passager")</td>
+                                            <td>@reservation.NumberOfSeats</td>
+                                            <td style="font-weight: 600; color: #d99a2b;">@reservation.TotalPrice.ToString("0.00") TND</td>
+                                            <td>
+                                                <span class="@ReservationBadge(reservation.Status)" style="font-size: 12px;">
+                                                    @reservation.Status
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                @if (reservation.Status == ReservationStatus.Pending)
+                                                {
+                                                    <div class="action-buttons">
+                                                        <form asp-controller="Reservation" asp-action="Confirm" method="post">
+                                                            <input type="hidden" name="id" value="@reservation.Id" />
+                                                            <button class="btn btn-sm btn-success" title="Confirmer la réservation">
+                                                                <i class="fas fa-check"></i>
+                                                            </button>
+                                                        </form>
+                                                        <form asp-controller="Reservation" asp-action="Cancel" method="post">
+                                                            <input type="hidden" name="id" value="@reservation.Id" />
+                                                            <button class="btn btn-sm btn-outline-danger" title="Refuser la réservation">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span style="color: #68706a; font-size: 13px;">-</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </section>
+            }
+        </div>
+
+        <aside class="col-lg-4">
+            <div class="driver-panel sticky-panel">
+                <div class="driver-header">
+                    <div class="driver-avatar">@((Model.Driver?.FirstName?.FirstOrDefault() ?? 'C').ToString().ToUpper())</div>
+                    <div class="driver-name">@(Model.Driver?.FullName ?? "Conducteur")</div>
+                    <div class="driver-rating">
+                        <span class="score">@driverRating.ToString("0.0")</span>
+                        <span class="stars">★★★★★</span>
+                    </div>
+                    <div class="driver-university">
+                        <i class="fas fa-graduation-cap me-1"></i>
+                        @(Model.Driver?.University ?? "Université")
+                    </div>
+                </div>
+
+                <div class="driver-body">
+                    <div class="btn-grid @(isDriver ? "" : "two-col")">
+                        @if (isDriver)
+                        {
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-dark">
+                                <i class="fas fa-pencil me-2"></i>Modifier
+                            </a>
+                            <form asp-action="Complete" method="post">
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <button class="btn btn-success w-100" @(Model.Status == TripStatus.Completed ? "disabled" : "")>
+                                    <i class="fas fa-check me-2"></i>Marqué terminé
+                                </button>
+                            </form>
+                        }
+                        else if (User.Identity?.IsAuthenticated != true)
+                        {
+                            <a asp-controller="Account" asp-action="Login" class="btn btn-dark w-100">
+                                <i class="fas fa-sign-in-alt me-2"></i>Se connecter pour réserver
+                            </a>
+                        }
+                        else if (userReservation != null)
+                        {
+                            <div class="reservation-status-note">
+                                Réservation: @userReservation.Status
+                            </div>
+                            <a asp-controller="Message" asp-action="Index" asp-route-userId="@Model.DriverId" asp-route-tripId="@Model.Id" class="btn btn-outline-dark w-100">
+                                <i class="fas fa-message me-2"></i>Contacter
+                            </a>
+                        }
+                        else if (remainingSeats > 0)
+                        {
+                            <a asp-controller="Reservation" asp-action="Create" asp-route-tripId="@Model.Id" class="btn btn-dark w-100">
+                                <i class="fas fa-check-circle me-2"></i>Réserver une place
+                            </a>
+                            <a asp-controller="Message" asp-action="Index" asp-route-userId="@Model.DriverId" asp-route-tripId="@Model.Id" class="btn btn-outline-dark w-100">
+                                <i class="fas fa-question-circle me-2"></i>Poser une question
+                            </a>
+                        }
+                        else
+                        {
+                            <button class="btn btn-secondary w-100" disabled>
+                                <i class="fas fa-times-circle me-2"></i>Complet
+                            </button>
+                        }
+                    </div>
+
+                    <div class="review-section">
+                        <h3 class="section-title mb-3">
+                            <i class="fas fa-star me-2" style="color: #d99a2b;"></i>Avis du conducteur
+                        </h3>
+
+                        @if (!driverReviews.Any())
+                        {
+                            <p class="text-muted mb-0">
+                                <i class="fas fa-inbox me-2"></i>Aucun avis pour le moment.
+                            </p>
+                        }
+                        else
+                        {
+                            @foreach (var review in driverReviews.Take(3))
+                            {
+                                <div class="review-item">
+                                    <div class="review-header">
+                                        <span>@(review.Reviewer?.FullName ?? "Étudiant")</span>
+                                        <span class="review-rating">@review.Rating/5 ★</span>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(review.Comment))
+                                    {
+                                        <p class="review-comment">@review.Comment</p>
+                                    }
+                                </div>
+                            }
+                        }
+
+                        @if (User.Identity?.IsAuthenticated == true && !isDriver && userReservation != null && userReservation.Status != ReservationStatus.Cancelled && !hasReviewed)
+                        {
+                            <form asp-controller="Review" asp-action="Create" method="post" class="review-form">
+                                <input type="hidden" name="tripId" value="@Model.Id" />
+                                <input type="hidden" name="reviewedUserId" value="@Model.DriverId" />
+                                <label class="form-label">
+                                    <i class="fas fa-pencil me-1"></i>Votre avis
+                                </label>
+                                <select name="rating" class="form-select form-select-sm mb-2" required>
+                                    <option value="5">★★★★★ Excellent</option>
+                                    <option value="4">★★★★☆ Très bien</option>
+                                    <option value="3">★★★☆☆ Correct</option>
+                                    <option value="2">★★☆☆☆ Moyen</option>
+                                    <option value="1">★☆☆☆☆ À éviter</option>
+                                </select>
+                                <textarea name="comment" class="form-control form-control-sm mb-2" rows="2" maxlength="500" placeholder="Commentaire optionnel..."></textarea>
+                                <button class="btn btn-outline-dark w-100 btn-sm">
+                                    <i class="fas fa-send me-1"></i>Publier l'avis
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>

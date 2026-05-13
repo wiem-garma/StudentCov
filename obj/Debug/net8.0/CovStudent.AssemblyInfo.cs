@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CovStudent")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f0b134278a8c48e963b7d19016d6ce241d367121")]
 [assembly: System.Reflection.AssemblyProductAttribute("CovStudent")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CovStudent")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

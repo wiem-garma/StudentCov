@@ -1,0 +1,209 @@
+@model CovStudent.Models.Trip
+
+@{
+    ViewData["Title"] = "Supprimer le trajet";
+    var reservationCount = Model.Reservations?.Count ?? 0;
+}
+
+<style>
+    .delete-container {
+        background: linear-gradient(135deg, rgba(185,71,60,0.05), rgba(230,45,61,0.05));
+        padding: 60px 20px;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .delete-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        max-width: 500px;
+        width: 100%;
+    }
+
+    .delete-header {
+        background: linear-gradient(135deg, #b9473c, #8b3530);
+        color: white;
+        padding: 40px;
+        text-align: center;
+    }
+
+    .delete-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.9;
+    }
+
+    .delete-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .delete-subtitle {
+        font-size: 14px;
+        opacity: 0.9;
+    }
+
+    .delete-body {
+        padding: 30px;
+    }
+
+    .delete-warning {
+        background: linear-gradient(135deg, rgba(226,167,46,0.1), rgba(226,167,46,0.05));
+        border-left: 4px solid #e2a72e;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .delete-warning-title {
+        font-weight: 700;
+        color: #b9473c;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .delete-warning-text {
+        font-size: 14px;
+        color: #68706a;
+        margin: 0;
+    }
+
+    .trip-details {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-left: 4px solid #136f63;
+    }
+
+    .trip-details-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+    }
+
+    .trip-details-row strong {
+        color: #202124;
+        font-weight: 700;
+    }
+
+    .trip-details-row span {
+        color: #68706a;
+    }
+
+    .delete-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+    }
+
+    .delete-actions .btn {
+        flex: 1;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .delete-actions .btn-outline-dark:hover {
+        background: white;
+    }
+
+    .delete-actions .btn-danger:hover {
+        background: #8b3530;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(139,53,48,0.2);
+    }
+
+    .reservation-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        background: #ffe5e5;
+        border-radius: 8px;
+        color: #b9473c;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .reservation-info i {
+        font-size: 16px;
+    }
+</style>
+
+<div class="delete-container">
+    <div class="delete-card">
+        <div class="delete-header">
+            <div class="delete-icon"><i class="fas fa-trash-alt"></i></div>
+            <h1 class="delete-title">Supprimer ce trajet ?</h1>
+            <p class="delete-subtitle">Action irréversible</p>
+        </div>
+
+        <div class="delete-body">
+            <div class="trip-details">
+                <div class="trip-details-row">
+                    <strong>Itinéraire</strong>
+                    <span>@Model.Departure → @Model.Destination</span>
+                </div>
+                <div class="trip-details-row">
+                    <strong>Date</strong>
+                    <span>@Model.DepartureTime.ToString("dd/MM/yyyy HH:mm")</span>
+                </div>
+            </div>
+
+            @if (reservationCount > 0)
+            {
+                <div class="delete-warning">
+                    <div class="delete-warning-title">
+                        <i class="fas fa-exclamation-triangle"></i>Attention
+                    </div>
+                    <p class="delete-warning-text">
+                        Ce trajet contient <strong>@reservationCount réservation(s)</strong>. 
+                        La suppression supprimera également toutes les données associées et notifiera les passagers.
+                    </p>
+                </div>
+            }
+
+            <p style="font-size: 14px; color: #68706a; margin-bottom: 20px; text-align: center;">
+                <i class="fas fa-info-circle me-1"></i>
+                Cette action ne peut pas être annulée.
+            </p>
+
+            <form asp-action="Delete" method="post" class="mb-0">
+                <input type="hidden" asp-for="Id" />
+                <div class="delete-actions">
+                    <a asp-controller="Dashboard" asp-action="MyTrips" class="btn btn-outline-dark">
+                        <i class="fas fa-times"></i>Annuler
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-check"></i>Confirmer la suppression
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Confirmation supplémentaire avant suppression
+        document.querySelector('form')?.addEventListener('submit', function(e) {
+            if (!confirm('Êtes-vous absolument sûr de vouloir supprimer ce trajet ? Cette action ne peut pas être annulée.')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+}

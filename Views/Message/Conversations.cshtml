@@ -1,0 +1,103 @@
+@{
+    ViewData["Title"] = "Conversations";
+}
+
+<div class="container py-4">
+
+    <div class="row">
+
+        <!-- LEFT : CONVERSATIONS -->
+        <div class="col-md-4">
+
+            <div class="conversation-card">
+
+                <div class="conversations-header">
+                    <h5><i class="fas fa-comments me-2"></i>Conversations</h5>
+                </div>
+
+                <div class="card-body p-3">
+
+                    <ul class="list-group list-group-flush">
+
+                        @if (ViewBag.Conversations != null)
+                        {
+                            foreach (var c in (IEnumerable<dynamic>)ViewBag.Conversations)
+                            {
+                                var name = c.UserId ?? "User";
+                                var initial = name.Substring(0, 1).ToUpper();
+
+                                <li class="list-group-item conversation-item border-0">
+
+                                    <a href="@Url.Action("Index", "Message", new { userId = c.UserId })"
+                                       class="text-decoration-none d-flex align-items-center gap-2">
+
+                                        <!-- Avatar -->
+                                        <div class="avatar">
+                                            @initial
+                                        </div>
+
+                                        <!-- Content -->
+                                        <div class="flex-grow-1">
+
+                                            <div class="fw-bold text-dark">
+                                                @name
+                                            </div>
+
+                                            <div class="message-preview">
+                                                @(c.LastMessage?.Content ?? "Aucun message")
+                                            </div>
+
+                                        </div>
+
+                                        <!-- Unread -->
+                                        @if (c.UnreadCount > 0)
+                                        {
+                                            <span class="unread-badge">
+                                                @c.UnreadCount
+                                            </span>
+                                        }
+
+                                    </a>
+
+                                </li>
+                            }
+                        }
+                        else
+                        {
+                            <li class="list-group-item text-muted text-center border-0">
+                                Aucune conversation
+                            </li>
+                        }
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RIGHT : EMPTY STATE -->
+        <div class="col-md-8">
+
+            <div class="card conversation-card">
+
+                <div class="card-body p-5 text-center">
+
+                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+
+                    <h5>Vos messages</h5>
+
+                    <p class="text-muted">
+                        S�lectionnez une conversation pour commencer � discuter
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

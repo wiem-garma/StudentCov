@@ -1,50 +1,223 @@
-﻿@model IEnumerable<CovStudent.Models.Trip>
+@model IEnumerable<CovStudent.Models.Trip>
 
 @{
-    ViewData["Title"] = "Liste des trajets";
+    ViewData["Title"] = "Trajets";
+
+    var trips = Model ?? Enumerable.Empty<CovStudent.Models.Trip>();
+    var mapTrips = trips.Select((trip, index) => new
+    {
+        id = trip.Id,
+        departure = trip.Departure,
+        destination = trip.Destination,
+        departureTime = trip.DepartureTime.ToString("dd/MM/yyyy HH:mm"),
+        driver = trip.Driver?.FullName ?? "Conducteur",
+        price = trip.PricePerSeat.ToString("0.00"),
+        seats = Math.Max(0, trip.AvailableSeats - (trip.Reservations?.Where(r => r.Status != CovStudent.Models.ReservationStatus.Cancelled).Sum(r => r.NumberOfSeats) ?? 0)),
+        index
+    }).ToList();
+    var mapTripsJson = System.Text.Json.JsonSerializer.Serialize(mapTrips);
 }
 
-<h1>🚗 Trajets disponibles</h1>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<p>
-    <a asp-action="Create" class="btn btn-primary">+ Publier un trajet</a>
-</p>
+<div class="page-shell-wide">
+    <section class="page-hero">
+        <div>
+            <span class="eyebrow"><i class="fas fa-map-location-dot"></i> Recherche de trajets</span>
+            <h1 class="page-title">Carte des trajets disponibles</h1>
+            <p class="hero-subtitle">Filtrez les départs, comparez les places restantes et ouvrez la carte pour visualiser les itinéraires.</p>
+        </div>
+        <a asp-action="Create" class="btn btn-dark">
+            <i class="fas fa-plus me-2"></i>Publier un trajet
+        </a>
+    </section>
 
-<table class="table table-striped table-hover">
-    <thead class="table-dark">
-        <tr>
-            <th>Départ</th>
-            <th>Destination</th>
-            <th>Date et heure</th>
-            <th>Places</th>
-            <th>Prix</th>
-            <th>Conducteur</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.Departure</td>
-                <td>@item.Destination</td>
-                <td>@item.DepartureTime.ToString("dd/MM/yyyy HH:mm")</td>
-                <td>@item.AvailableSeats</td>
-                <td>@item.PricePerSeat TND</td>
-                <td>@(item.Driver?.FullName ?? "À définir")</td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-info">Détails</a>
-                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-warning">Modifier</a>
-                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger">Supprimer</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+    <section class="filter-panel mb-4">
+        <form method="get" asp-action="Index" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label" for="departure">Départ</label>
+                <input id="departure" name="departure" value="@ViewBag.Departure" class="form-control" placeholder="Ville de départ" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="destination">Destination</label>
+                <input id="destination" name="destination" value="@ViewBag.Destination" class="form-control" placeholder="Ville d'arrivée" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="date">Date</label>
+                <input id="date" type="date" name="date" value="@ViewBag.Date" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-dark w-100" type="submit">
+                    <i class="fas fa-search me-2"></i>Rechercher
+                </button>
+            </div>
+        </form>
+    </section>
 
-@if (!Model.Any())
-{
-    <div class="alert alert-info">
-        Aucun trajet disponible pour le moment. <a asp-action="Create">Soyez le premier à publier un trajet !</a>
+    <div class="trip-layout">
+        <section>
+            <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                <h2 class="section-title mb-0">Résultats (@trips.Count())</h2>
+                <a asp-action="Index" class="btn btn-outline-dark btn-sm">
+                    <i class="fas fa-rotate-left"></i>Réinitialiser
+                </a>
+            </div>
+
+            <div class="trip-results">
+                @if (!trips.Any())
+                {
+                    <div class="surface-card empty-state">
+                        <i class="fas fa-car"></i>
+                        <h2>Aucun trajet trouvé</h2>
+                        <p>Essayez une autre ville, une autre date, ou publiez votre propre trajet.</p>
+                        <a asp-action="Create" class="btn btn-dark">
+                            <i class="fas fa-plus me-2"></i>Publier un trajet
+                        </a>
+                    </div>
+                }
+
+                @foreach (var item in trips)
+                {
+                    var remainingSeats = Math.Max(0, item.AvailableSeats - (item.Reservations?.Where(r => r.Status != CovStudent.Models.ReservationStatus.Cancelled).Sum(r => r.NumberOfSeats) ?? 0));
+
+                    <article class="trip-card" data-trip-id="@item.Id">
+                        <div class="trip-card-top">
+                            <span class="trip-seats"><i class="fas fa-chair"></i>@remainingSeats place(s)</span>
+                            <span class="trip-price">@item.PricePerSeat.ToString("0.00") TND</span>
+                        </div>
+
+                        <div class="route-stack">
+                            <div class="route-row">
+                                <span class="route-dot"></span>
+                                <span>@item.Departure</span>
+                            </div>
+                            <div class="route-line"></div>
+                            <div class="route-row">
+                                <span class="route-dot destination"></span>
+                                <span>@item.Destination</span>
+                            </div>
+                        </div>
+
+                        <div class="trip-card-meta">
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>@(item.Driver?.FullName ?? "Conducteur")
+                            </small>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>@item.DepartureTime.ToString("dd/MM HH:mm")
+                            </small>
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-dark">
+                                Voir
+                            </a>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+
+        <section class="map-panel">
+            <div id="map"></div>
+        </section>
     </div>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        (() => {
+            const trips = @Html.Raw(mapTripsJson);
+            const mapElement = document.getElementById('map');
+            if (!mapElement) return;
+
+            if (!window.L) {
+                mapElement.innerHTML = '<div class="map-fallback">Carte indisponible pour le moment.</div>';
+                return;
+            }
+
+            const knownCities = {
+                tunis: [36.8065, 10.1815],
+                ariana: [36.8665, 10.1647],
+                manouba: [36.8101, 10.0956],
+                ben_arous: [36.7531, 10.2189],
+                bizerte: [37.2744, 9.8739],
+                nabeul: [36.4513, 10.7350],
+                hammamet: [36.4000, 10.6167],
+                sousse: [35.8245, 10.6346],
+                monastir: [35.7643, 10.8113],
+                mahdia: [35.5047, 11.0622],
+                sfax: [34.7398, 10.7600],
+                kairouan: [35.6781, 10.0963],
+                gabes: [33.8815, 10.0982],
+                medenine: [33.3549, 10.5055],
+                tataouine: [32.9297, 10.4518],
+                gafsa: [34.4250, 8.7842],
+                tozeur: [33.9197, 8.1335],
+                kef: [36.1742, 8.7049],
+                beja: [36.7256, 9.1817],
+                jendouba: [36.5011, 8.7802]
+            };
+
+            const normalize = value => (value || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '_')
+                .replace(/^_|_$/g, '');
+
+            const coordinatesFor = (city, index, type) => {
+                const normalized = normalize(city);
+                const matchedKey = Object.keys(knownCities).find(key => normalized.includes(key) || key.includes(normalized));
+                if (matchedKey) return knownCities[matchedKey];
+
+                const latOffset = (((index * 37) % 32) - 16) / 100;
+                const lngOffset = (((index * 53) % 36) - 18) / 100;
+                return [35.8 + latOffset + (type === 'destination' ? 0.08 : 0), 10.2 + lngOffset];
+            };
+
+            const map = L.map('map', { scrollWheelZoom: false }).setView([35.9, 10.2], 7);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            const bounds = [];
+            const markers = new Map();
+
+            trips.forEach((trip, index) => {
+                const departure = coordinatesFor(trip.departure, index, 'departure');
+                const destination = coordinatesFor(trip.destination, index, 'destination');
+                bounds.push(departure, destination);
+
+                const line = L.polyline([departure, destination], {
+                    color: '#116b60',
+                    weight: 4,
+                    opacity: 0.85
+                }).addTo(map);
+
+                const marker = L.marker(destination).addTo(map)
+                    .bindPopup(`
+                        <strong>${trip.departure} -> ${trip.destination}</strong><br>
+                        ${trip.departureTime}<br>
+                        ${trip.seats} place(s) - ${trip.price} TND<br>
+                        <a href="/Trip/Details/${trip.id}">Voir le trajet</a>
+                    `);
+
+                markers.set(String(trip.id), { marker, line });
+            });
+
+            if (bounds.length) {
+                map.fitBounds(bounds, { padding: [28, 28] });
+            }
+
+            document.querySelectorAll('[data-trip-id]').forEach(card => {
+                card.addEventListener('click', event => {
+                    if (event.target.closest('a')) return;
+                    const item = markers.get(card.dataset.tripId);
+                    if (!item) return;
+                    map.fitBounds(item.line.getBounds(), { padding: [42, 42], maxZoom: 10 });
+                    item.marker.openPopup();
+                });
+            });
+        })();
+    </script>
 }

@@ -1,0 +1,111 @@
+@model CovStudent.ViewModels.LoginViewModel
+
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Connexion";
+}
+
+<div class="auth-scene">
+    <section class="auth-story">
+        <div>
+            <span class="eyebrow"><i class="fas fa-graduation-cap"></i> Covoiturage étudiant</span>
+            <h1>Retrouvez vos trajets, vos messages et vos réservations au même endroit.</h1>
+            <p>CovStudent aide les étudiants à publier des trajets fiables, réserver une place et échanger avec les conducteurs avant le départ.</p>
+        </div>
+
+        <div class="auth-mini-grid">
+            <div class="auth-mini-card">
+                <i class="fas fa-route"></i>
+                <strong>Trajets</strong>
+                <span>Recherche rapide par ville et date.</span>
+            </div>
+            <div class="auth-mini-card">
+                <i class="fas fa-ticket"></i>
+                <strong>Réservations</strong>
+                <span>Demandes suivies depuis le dashboard.</span>
+            </div>
+            <div class="auth-mini-card">
+                <i class="fas fa-comments"></i>
+                <strong>Messages</strong>
+                <span>Contact direct avec les membres.</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="auth-panel">
+        <div class="auth-panel-header">
+            <span class="auth-icon"><i class="fas fa-right-to-bracket"></i></span>
+            <h2>Connexion</h2>
+            <p>Accédez à votre espace CovStudent.</p>
+        </div>
+
+        <form asp-action="Login" method="post" id="loginForm">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Adresse email</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                    <input asp-for="Email" class="form-control" placeholder="exemple@email.com" autocomplete="email" />
+                </div>
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">Mot de passe</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    <input asp-for="Password" type="password" id="password" class="form-control" placeholder="Votre mot de passe" autocomplete="current-password" />
+                    <button class="input-action" type="button" data-password-toggle="password" aria-label="Afficher le mot de passe">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                <div class="form-check">
+                    <input asp-for="RememberMe" class="form-check-input" />
+                    <label asp-for="RememberMe" class="form-check-label"></label>
+                </div>
+                <a asp-controller="Trip" asp-action="Index" class="small fw-bold text-decoration-none">Voir les trajets</a>
+            </div>
+
+            <button type="submit" class="btn btn-auth w-100" id="loginBtn">
+                <i class="fas fa-right-to-bracket me-2"></i>Se connecter
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Nouveau sur CovStudent ?
+            <a asp-action="Register">Créer un compte</a>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        document.querySelectorAll('[data-password-toggle]').forEach(button => {
+            button.addEventListener('click', () => {
+                const input = document.getElementById(button.dataset.passwordToggle);
+                const icon = button.querySelector('i');
+                const isHidden = input?.type === 'password';
+                if (!input || !icon) return;
+
+                input.type = isHidden ? 'text' : 'password';
+                icon.classList.toggle('fa-eye', !isHidden);
+                icon.classList.toggle('fa-eye-slash', isHidden);
+            });
+        });
+
+        document.getElementById('loginForm')?.addEventListener('submit', () => {
+            const btn = document.getElementById('loginBtn');
+            if (!btn) return;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i>Connexion...';
+            btn.disabled = true;
+        });
+    </script>
+}

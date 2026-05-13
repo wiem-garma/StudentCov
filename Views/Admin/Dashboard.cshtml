@@ -1,0 +1,163 @@
+@{
+    ViewData["Title"] = "Administration";
+    var users = ViewBag.RecentUsers as IEnumerable<CovStudent.Models.AppUser> ?? Enumerable.Empty<CovStudent.Models.AppUser>();
+    var trips = ViewBag.RecentTrips as IEnumerable<CovStudent.Models.Trip> ?? Enumerable.Empty<CovStudent.Models.Trip>();
+    var reservations = ViewBag.RecentReservations as IEnumerable<CovStudent.Models.Reservation> ?? Enumerable.Empty<CovStudent.Models.Reservation>();
+}
+
+<div class="container-fluid py-4">
+    <div class="admin-header">
+        <div>
+            <span class="eyebrow"><i class="fas fa-shield-halved me-1"></i>Administration</span>
+            <h1 class="page-title">Dashboard administrateur</h1>
+            <p class="hero-subtitle mb-0">Surveillez les utilisateurs, les trajets et les réservations depuis une vue plus directe.</p>
+        </div>
+
+        <div class="dashboard-tags">
+            <span class="dashboard-tag"><i class="fas fa-users"></i>@ViewBag.UsersCount utilisateurs</span>
+            <span class="dashboard-tag"><i class="fas fa-route"></i>@ViewBag.ActiveTripsCount trajets actifs</span>
+            <span class="dashboard-tag"><i class="fas fa-bell"></i>@ViewBag.NotificationsCount notifications</span>
+        </div>
+    </div>
+
+    <div class="stats-grid mb-4">
+        <div class="stat-tile">
+            <small>Utilisateurs</small>
+            <strong>@ViewBag.UsersCount</strong>
+        </div>
+        <div class="stat-tile">
+            <small>Trajets actifs</small>
+            <strong>@ViewBag.ActiveTripsCount</strong>
+        </div>
+        <div class="stat-tile">
+            <small>Reservations</small>
+            <strong>@ViewBag.ReservationsCount</strong>
+        </div>
+        <div class="stat-tile">
+            <small>Messages</small>
+            <strong>@ViewBag.MessagesCount</strong>
+        </div>
+        <div class="stat-tile">
+            <small>Notifications</small>
+            <strong>@ViewBag.NotificationsCount</strong>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-5">
+            <section class="app-card p-0 overflow-hidden">
+                <div class="panel-heading">
+                    <h2 class="section-title mb-0">Utilisateurs récents</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 app-table">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Universite</th>
+                                <th>Etat</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in users)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@user.FullName</strong>
+                                        <small class="d-block text-muted">@user.Email</small>
+                                    </td>
+                                    <td>@(user.University ?? "-")</td>
+                                    <td>
+                                        <span class="badge @(user.IsBlocked ? "text-bg-danger" : "text-bg-success")">
+                                            @(user.IsBlocked ? "Bloque" : "Actif")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <form asp-action="ToggleUserBlock" method="post">
+                                            <input type="hidden" name="id" value="@user.Id" />
+                                            <button class="btn btn-sm btn-outline-dark">
+                                                @(user.IsBlocked ? "Débloquer" : "Bloquer")
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-xl-7">
+            <section class="app-card p-0 overflow-hidden mb-4">
+                <div class="panel-heading">
+                    <h2 class="section-title mb-0">Trajets récents</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 app-table">
+                        <thead>
+                            <tr>
+                                <th>Trajet</th>
+                                <th>Conducteur</th>
+                                <th>Date</th>
+                                <th>Statut</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var trip in trips)
+                            {
+                                <tr>
+                                    <td><strong>@trip.Departure -> @trip.Destination</strong></td>
+                                    <td>@(trip.Driver?.FullName ?? "-")</td>
+                                    <td>@trip.DepartureTime.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td><span class="status-pill status-@trip.Status.ToString().ToLowerInvariant()">@trip.Status</span></td>
+                                    <td class="text-end">
+                                        <a asp-controller="Trip" asp-action="Details" asp-route-id="@trip.Id" class="btn btn-sm btn-outline-dark">Voir</a>
+                                        @if (trip.Status == TripStatus.Active)
+                                        {
+                                            <form asp-action="CancelTrip" method="post" class="d-inline">
+                                                <input type="hidden" name="id" value="@trip.Id" />
+                                                <button class="btn btn-sm btn-outline-danger">Annuler</button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="app-card p-0 overflow-hidden">
+                <div class="panel-heading">
+                    <h2 class="section-title mb-0">Dernières réservations</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 app-table">
+                        <thead>
+                            <tr>
+                                <th>Passager</th>
+                                <th>Trajet</th>
+                                <th>Total</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var reservation in reservations)
+                            {
+                                <tr>
+                                    <td>@(reservation.Passenger?.FullName ?? "-")</td>
+                                    <td>@reservation.Trip?.Departure -> @reservation.Trip?.Destination</td>
+                                    <td>@reservation.TotalPrice.ToString("0.00") TND</td>
+                                    <td><span class="badge text-bg-light">@reservation.Status</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>

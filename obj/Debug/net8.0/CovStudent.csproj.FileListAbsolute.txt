@@ -264,6 +264,10 @@ C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.pdb
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\CovStudent.deps.json
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\CovStudent.runtimeconfig.json
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\CovStudent.pdb
-C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.genruntimeconfig.cache
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\ref\CovStudent.dll
+C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.sourcelink.json
+C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\4e11d907f19e4e0f\CovStudent\obj\Debug\net8.0\CovStudent.dll
+C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\4e11d907f19e4e0f\CovStudent\obj\Debug\net8.0\refint\CovStudent.dll
+C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\4e11d907f19e4e0f\CovStudent\obj\Debug\net8.0\CovStudent.pdb
+C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt

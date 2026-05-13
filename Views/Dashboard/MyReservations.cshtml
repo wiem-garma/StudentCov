@@ -1,0 +1,102 @@
+@model IEnumerable<CovStudent.Models.Reservation>
+
+@{
+    ViewData["Title"] = "Mes reservations";
+    var reservations = Model ?? Enumerable.Empty<CovStudent.Models.Reservation>();
+
+    string Badge(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Pending => "badge-pending",
+        ReservationStatus.Confirmed => "badge-confirmed",
+        ReservationStatus.Cancelled => "badge-cancelled",
+        ReservationStatus.Completed => "badge-completed",
+        _ => "badge-default"
+    };
+}
+
+<div class="container py-4">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    <div class="myreservations-header">
+        <div>
+            <span class="eyebrow"><i class="fas fa-user me-1"></i>Historique passager</span>
+            <h1 class="page-title mb-0">Mes reservations</h1>
+        </div>
+        <a asp-controller="Trip" asp-action="Index" class="btn btn-dark btn-sm">
+            <i class="fas fa-search me-2"></i>Trouver un trajet
+        </a>
+    </div>
+
+    @if (!reservations.Any())
+    {
+        <section class="app-card empty-state">
+            <i class="fas fa-ticket-alt"></i>
+            <h2>Aucune reservation</h2>
+            <p>Recherchez un trajet disponible et envoyez votre premiere demande.</p>
+            <a asp-controller="Trip" asp-action="Index" class="btn btn-dark">
+                <i class="fas fa-search me-2"></i>Rechercher
+            </a>
+        </section>
+    }
+    else
+    {
+        <section class="app-card p-0 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0 app-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-route me-2"></i>Trajet</th>
+                            <th><i class="fas fa-calendar me-2"></i>Date départ</th>
+                            <th><i class="fas fa-user-circle me-2"></i>Conducteur</th>
+                            <th><i class="fas fa-chair me-2"></i>Places</th>
+                            <th><i class="fas fa-tag me-2"></i>Total</th>
+                            <th><i class="fas fa-info me-2"></i>Statut</th>
+                            <th class="text-end"><i class="fas fa-cogs me-2"></i>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var reservation in reservations)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="trip-route">@reservation.Trip?.Departure → @reservation.Trip?.Destination</span>
+                                    <span class="trip-date-info">Réservé le @reservation.ReservationDate.ToString("dd/MM/yyyy HH:mm")</span>
+                                </td>
+                                <td>@(reservation.Trip?.DepartureTime.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                <td>@(reservation.Trip?.Driver?.FullName ?? "Conducteur")</td>
+                                <td><span class="badge" style="background: #e7f5f5; color: #136f63;">@reservation.NumberOfSeats</span></td>
+                                <td style="font-weight: 700; color: #d99a2b;">@reservation.TotalPrice.ToString("0.00") TND</td>
+                                <td><span class="badge @Badge(reservation.Status)">@reservation.Status</span></td>
+                                <td class="text-end">
+                                    <div class="btn-actions">
+                                        @if (reservation.Trip != null)
+                                        {
+                                            <a asp-controller="Trip" asp-action="Details" asp-route-id="@reservation.TripId" class="btn btn-outline-dark" title="Voir détails">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a asp-controller="Message" asp-action="Index" asp-route-userId="@reservation.Trip.DriverId" asp-route-tripId="@reservation.TripId" class="btn btn-outline-dark" title="Messagerie">
+                                                <i class="fas fa-envelope"></i>
+                                            </a>
+                                        }
+                                        @if (reservation.Status == ReservationStatus.Pending || reservation.Status == ReservationStatus.Confirmed)
+                                        {
+                                            <form asp-controller="Reservation" asp-action="Cancel" method="post" class="d-inline">
+                                                <input type="hidden" name="id" value="@reservation.Id" />
+                                                <button class="btn btn-outline-danger" title="Annuler">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+</div>

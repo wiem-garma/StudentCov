@@ -1,13 +1,17 @@
 ﻿using CovStudent.Models;
+
 namespace CovStudent.Services;
 
 public interface IReservationService
 {
-    IEnumerable<Reservation> GetReservationsByPassenger(string passengerId);
-    IEnumerable<Reservation> GetReservationsByTrip(int tripId);
-    Reservation? GetReservationById(int id);
-    bool CreateReservation(Reservation reservation);
-    void ConfirmReservation(int id);
-    void CancelReservation(int id);
-    void CompleteReservation(int id);
+    Task<IEnumerable<Reservation>> GetReservationsByPassengerAsync(string passengerId);
+    Task<IEnumerable<Reservation>> GetReservationsByTripAsync(int tripId);
+    Task<IEnumerable<Reservation>> GetReservationsForDriverAsync(string driverId);
+    Task<Reservation?> GetReservationByIdAsync(int id);
+
+    Task<bool> CreateReservationAsync(Reservation reservation);
+
+    Task<bool> ConfirmReservationAsync(int id);
+    Task<bool> CancelReservationAsync(int id);
+    Task<bool> CompleteReservationAsync(int id);
 }

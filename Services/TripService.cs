@@ -1,6 +1,5 @@
 ﻿using CovStudent.Data;
 using CovStudent.Models;
-using CovStudent.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace CovStudent.Services;
@@ -14,40 +13,76 @@ public class TripService : ITripService
         _context = context;
     }
 
-    public IEnumerable<Trip> GetAllTrips()
-    {
-        return _context.Trips
+    public async Task<IEnumerable<Trip>> GetAllTripsAsync()
+        => await _context.Trips
             .Include(t => t.Driver)
             .Include(t => t.Reservations)
-            .OrderBy(t => t.DepartureTime)
-            .ToList();
-    }
+            .ToListAsync();
 
-    public IEnumerable<Trip> GetAvailableTrips()
-    {
-        return _context.Trips
+    public async Task<IEnumerable<Trip>> GetAvailableTripsAsync()
+        => await _context.Trips
             .Include(t => t.Driver)
-            .Where(t => t.Status == "Active" &&
-                       t.DepartureTime > DateTime.Now &&
-                       t.AvailableSeats > 0)
-            .OrderBy(t => t.DepartureTime)
-            .ToList();
-    }
-
-    public IEnumerable<Trip> GetTripsByDriver(string driverId)
-    {
-        return _context.Trips
             .Include(t => t.Reservations)
+            .Where(t => t.Status == TripStatus.Active)
+            .ToListAsync();
+
+    public async Task<IEnumerable<Trip>> GetTripsByDriverAsync(string driverId)
+        => await _context.Trips
+            .Include(t => t.Reservations)
+            .ThenInclude(r => r.Passenger)
             .Where(t => t.DriverId == driverId)
-            .OrderByDescending(t => t.CreatedAt)
-            .ToList();
+            .OrderByDescending(t => t.DepartureTime)
+            .ToListAsync();
+
+    public async Task<Trip?> GetTripByIdAsync(int id)
+        => await _context.Trips
+            .Include(t => t.Driver)
+            .Include(t => t.Reservations)
+            .ThenInclude(r => r.Passenger)
+            .FirstOrDefaultAsync(t => t.Id == id);
+
+    public async Task AddTripAsync(Trip trip)
+    {
+        _context.Trips.Add(trip);
+        await _context.SaveChangesAsync();
     }
 
-    public IEnumerable<Trip> SearchTrips(string departure, string destination, DateTime? date)
+    public async Task UpdateTripAsync(Trip trip)
+    {
+        _context.Trips.Update(trip);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteTripAsync(int id)
+    {
+        var trip = await _context.Trips.FindAsync(id);
+        if (trip != null)
+        {
+            _context.Trips.Remove(trip);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task<bool> HasAvailableSeatsAsync(int tripId, int requestedSeats)
+    {
+        var trip = await _context.Trips.FindAsync(tripId);
+
+        if (trip == null)
+            return false;
+
+        var reservedSeats = await _context.Reservations
+            .Where(r => r.TripId == tripId && r.Status != ReservationStatus.Cancelled)
+            .SumAsync(r => r.NumberOfSeats);
+
+        return trip.AvailableSeats - reservedSeats >= requestedSeats;
+    }
+
+    public async Task<IEnumerable<Trip>> SearchTripsAsync(string? departure, string? destination, DateTime? date)
     {
         var query = _context.Trips
             .Include(t => t.Driver)
-            .Where(t => t.Status == "Active" && t.AvailableSeats > 0);
+            .Include(t => t.Reservations)
+            .AsQueryable();
 
         if (!string.IsNullOrEmpty(departure))
             query = query.Where(t => t.Departure.Contains(departure));
@@ -58,49 +93,6 @@ public class TripService : ITripService
         if (date.HasValue)
             query = query.Where(t => t.DepartureTime.Date == date.Value.Date);
 
-        return query.OrderBy(t => t.DepartureTime).ToList();
-    }
-
-    public Trip? GetTripById(int id)
-    {
-        return _context.Trips
-            .Include(t => t.Driver)
-            .Include(t => t.Reservations)
-            .ThenInclude(r => r.Passenger)
-            .FirstOrDefault(t => t.Id == id);
-    }
-
-    public void AddTrip(Trip trip)
-    {
-        _context.Trips.Add(trip);
-        _context.SaveChanges();
-    }
-
-    public void UpdateTrip(Trip trip)
-    {
-        _context.Trips.Update(trip);
-        _context.SaveChanges();
-    }
-
-    public void DeleteTrip(int id)
-    {
-        var trip = _context.Trips.Find(id);
-        if (trip != null)
-        {
-            _context.Trips.Remove(trip);
-            _context.SaveChanges();
-        }
-    }
-
-    public bool HasAvailableSeats(int tripId, int requestedSeats)
-    {
-        var trip = _context.Trips.Find(tripId);
-        if (trip == null) return false;
-
-        var reservedSeats = _context.Reservations
-            .Where(r => r.TripId == tripId && r.Status == "Confirmed")
-            .Sum(r => r.NumberOfSeats);
-
-        return (trip.AvailableSeats - reservedSeats) >= requestedSeats;
+        return await query.ToListAsync();
     }
 }

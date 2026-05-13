@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace CovStudent.Views.Home
+namespace CovStudent.Views.Account
 {
-    public class IndexModel : PageModel
+    public class RegisterModel : PageModel
     {
         public void OnGet()
         {

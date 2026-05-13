@@ -1,0 +1,256 @@
+﻿@model CovStudent.Models.AppUser
+
+@{
+    ViewData["Title"] = "Mon profil";
+}
+
+<style>
+    .profile-container {
+        background: linear-gradient(135deg, rgba(19,111,99,0.05), rgba(107,94,168,0.05));
+        padding: 40px 20px;
+        min-height: 100vh;
+    }
+
+    .profile-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 35px rgba(0,0,0,0.08);
+    }
+
+    .profile-header {
+        background: linear-gradient(135deg, #136f63, #0d5148);
+        color: white;
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        background: rgba(255,255,255,0.2);
+        color: #d99a2b;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        margin: 0 auto 16px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        border: 3px solid rgba(255,255,255,0.3);
+    }
+
+    .profile-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .profile-subtitle {
+        font-size: 14px;
+        opacity: 0.85;
+    }
+
+    .profile-body {
+        padding: 30px;
+    }
+
+    .info-section {
+        background: #f8f9fa;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+
+    .info-row:last-child {
+        border-bottom: none;
+    }
+
+    .info-label {
+        color: #68706a;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .info-label i {
+        color: #d99a2b;
+        font-size: 14px;
+    }
+
+    .info-value {
+        font-weight: 700;
+        color: #202124;
+        text-align: right;
+        font-size: 14px;
+    }
+
+    .info-value.muted {
+        color: #68706a;
+        font-weight: 500;
+    }
+
+    .success-banner {
+        background: linear-gradient(135deg, rgba(34,139,95,0.08), rgba(34,139,95,0.12));
+        border-left: 4px solid #228b5f;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        color: #228b5f;
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .profile-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 25px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e5e5;
+    }
+
+    .profile-actions .btn {
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-size: 14px;
+    }
+
+    .profile-actions .btn-dark:hover {
+        background: #0d5148;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(13,81,72,0.2);
+    }
+
+    .profile-actions .btn-outline-danger:hover {
+        background: #b9473c;
+        border-color: #b9473c;
+    }
+
+    @@media (max-width: 576px) {
+        .profile-actions {
+            grid-template-columns: 1fr;
+        }
+
+
+        .info-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .info-value {
+            text-align: left;
+            margin-top: 6px;
+        }
+    }
+</style>
+
+<div class="profile-container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="profile-card">
+                <!-- HEADER -->
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h1 class="profile-title">Mon profil</h1>
+                    <p class="profile-subtitle">Vos informations personnelles</p>
+                </div>
+
+                <!-- BODY -->
+                <div class="profile-body">
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="success-banner">
+                            <i class="fas fa-check-circle"></i>
+                            @TempData["SuccessMessage"]
+                        </div>
+                    }
+
+                    <!-- INFO SECTION -->
+                    <div class="info-section">
+                        <div class="info-row">
+                            <span class="info-label">
+                                <i class="fas fa-id-badge"></i>Prénom
+                            </span>
+                            <span class="info-value">@Model.FirstName</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">
+                                <i class="fas fa-id-badge"></i>Nom
+                            </span>
+                            <span class="info-value">@Model.LastName</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">
+                                <i class="fas fa-envelope"></i>Email
+                            </span>
+                            <span class="info-value">@Model.Email</span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">
+                                <i class="fas fa-phone"></i>Téléphone
+                            </span>
+                            <span class="info-value @(string.IsNullOrEmpty(Model.PhoneNumber) ? "muted" : "")">
+                                @(string.IsNullOrEmpty(Model.PhoneNumber) ? "Non renseigné" : Model.PhoneNumber)
+                            </span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">
+                                <i class="fas fa-graduation-cap"></i>Université
+                            </span>
+                            <span class="info-value @(string.IsNullOrEmpty(Model.University) ? "muted" : "")">
+                                @(string.IsNullOrEmpty(Model.University) ? "Non renseignée" : Model.University)
+                            </span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">
+                                <i class="fas fa-calendar"></i>Membre depuis
+                            </span>
+                            <span class="info-value">@Model.RegistrationDate.ToString("dd/MM/yyyy")</span>
+                        </div>
+                    </div>
+
+                    <!-- ACTIONS -->
+                    <div class="profile-actions">
+                        <a asp-action="EditProfile" class="btn btn-dark">
+                            <i class="fas fa-pencil"></i>Modifier
+                        </a>
+                        <form asp-action="Logout" method="post" class="m-0">
+                            <button type="submit" class="btn btn-outline-danger w-100">
+                                <i class="fas fa-sign-out-alt"></i>Déconnexion
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

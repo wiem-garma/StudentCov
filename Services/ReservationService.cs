@@ -1,6 +1,7 @@
 ﻿using CovStudent.Data;
 using CovStudent.Models;
 using Microsoft.EntityFrameworkCore;
+
 namespace CovStudent.Services;
 
 public class ReservationService : IReservationService
@@ -12,72 +13,119 @@ public class ReservationService : IReservationService
         _context = context;
     }
 
-    public IEnumerable<Reservation> GetReservationsByPassenger(string passengerId)
+    // ================= GET BY PASSENGER =================
+
+    public async Task<IEnumerable<Reservation>> GetReservationsByPassengerAsync(string passengerId)
     {
-        return _context.Reservations
+        return await _context.Reservations
             .Include(r => r.Trip)
             .ThenInclude(t => t!.Driver)
             .Where(r => r.PassengerId == passengerId)
             .OrderByDescending(r => r.ReservationDate)
-            .ToList();
+            .ToListAsync();
     }
 
-    public IEnumerable<Reservation> GetReservationsByTrip(int tripId)
+    // ================= GET BY TRIP =================
+
+    public async Task<IEnumerable<Reservation>> GetReservationsByTripAsync(int tripId)
     {
-        return _context.Reservations
+        return await _context.Reservations
             .Include(r => r.Passenger)
+            .Include(r => r.Trip)
             .Where(r => r.TripId == tripId)
-            .ToList();
+            .OrderByDescending(r => r.ReservationDate)
+            .ToListAsync();
     }
 
-    public Reservation? GetReservationById(int id)
+    // ================= GET BY DRIVER =================
+
+    public async Task<IEnumerable<Reservation>> GetReservationsForDriverAsync(string driverId)
     {
-        return _context.Reservations
+        return await _context.Reservations
+            .Include(r => r.Passenger)
+            .Include(r => r.Trip)
+            .Where(r => r.Trip != null && r.Trip.DriverId == driverId)
+            .OrderByDescending(r => r.ReservationDate)
+            .ToListAsync();
+    }
+
+    // ================= GET BY ID =================
+
+    public async Task<Reservation?> GetReservationByIdAsync(int id)
+    {
+        return await _context.Reservations
             .Include(r => r.Trip)
             .Include(r => r.Passenger)
-            .FirstOrDefault(r => r.Id == id);
+            .FirstOrDefaultAsync(r => r.Id == id);
     }
 
-    public bool CreateReservation(Reservation reservation)
+    // ================= CREATE =================
+
+    public async Task<bool> CreateReservationAsync(Reservation reservation)
     {
-        var trip = _context.Trips.Find(reservation.TripId);
-        if (trip == null) return false;
+        var trip = await _context.Trips
+            .FirstOrDefaultAsync(t => t.Id == reservation.TripId);
+
+        if (trip == null)
+            return false;
+
+        // ❌ check seats available
+        var reservedSeats = await _context.Reservations
+            .Where(r => r.TripId == reservation.TripId && r.Status != ReservationStatus.Cancelled)
+            .SumAsync(r => r.NumberOfSeats);
+
+        if (trip.AvailableSeats < reservedSeats + reservation.NumberOfSeats)
+            return false;
 
         reservation.TotalPrice = trip.PricePerSeat * reservation.NumberOfSeats;
-        reservation.Status = "Pending";
+        reservation.Status = ReservationStatus.Pending;
+        reservation.ReservationDate = DateTime.Now;
 
         _context.Reservations.Add(reservation);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
+
         return true;
     }
 
-    public void ConfirmReservation(int id)
+    // ================= CONFIRM =================
+
+    public async Task<bool> ConfirmReservationAsync(int id)
     {
-        var reservation = _context.Reservations.Find(id);
-        if (reservation != null)
-        {
-            reservation.Status = "Confirmed";
-            _context.SaveChanges();
-        }
+        var reservation = await _context.Reservations.FindAsync(id);
+
+        if (reservation == null)
+            return false;
+
+        reservation.Status = ReservationStatus.Confirmed;
+        await _context.SaveChangesAsync();
+        return true;
     }
 
-    public void CancelReservation(int id)
+    // ================= CANCEL =================
+
+    public async Task<bool> CancelReservationAsync(int id)
     {
-        var reservation = _context.Reservations.Find(id);
-        if (reservation != null)
-        {
-            reservation.Status = "Cancelled";
-            _context.SaveChanges();
-        }
+        var reservation = await _context.Reservations.FindAsync(id);
+
+        if (reservation == null)
+            return false;
+
+        reservation.Status = ReservationStatus.Cancelled;
+        await _context.SaveChangesAsync();
+        return true;
     }
 
-    public void CompleteReservation(int id)
+    // ================= COMPLETE =================
+
+    public async Task<bool> CompleteReservationAsync(int id)
     {
-        var reservation = _context.Reservations.Find(id);
-        if (reservation != null)
-        {
-            reservation.Status = "Completed";
-            _context.SaveChanges();
-        }
+        var reservation = await _context.Reservations.FindAsync(id);
+
+        if (reservation == null)
+            return false;
+
+        reservation.Status = ReservationStatus.Completed;
+        await _context.SaveChangesAsync();
+        return true;
     }
 }
