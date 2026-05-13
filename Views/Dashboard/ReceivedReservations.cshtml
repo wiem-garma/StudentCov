@@ -59,8 +59,25 @@
                         {
                             <tr>
                                 <td>
-                                    <span class="passenger-info">@(reservation.Passenger?.FullName ?? "Passager")</span>
-                                    <span class="passenger-email">@reservation.Passenger?.Email</span>
+                                    <div class="d-flex flex-column gap-1">
+                                        <span class="passenger-info">@(reservation.Passenger?.FullName ?? "Passager")</span>
+                                        @if (reservation.Passenger != null)
+                                        {
+                                            <a asp-controller="Account"
+                                               asp-action="Profile"
+                                               asp-route-id="@reservation.PassengerId"
+                                               asp-route-tripId="@reservation.TripId"
+                                               class="btn btn-sm btn-outline-dark align-self-start">
+                                                <i class="fas fa-user me-1"></i>Voir profil
+                                            </a>
+                                        }
+                                        <span class="passenger-email">@reservation.Passenger?.Email</span>
+                                        <span class="passenger-email">
+                                        @(string.IsNullOrWhiteSpace(reservation.Passenger?.City) && string.IsNullOrWhiteSpace(reservation.Passenger?.Address)
+                                            ? "Localisation non renseignée"
+                                            : string.Join(" - ", new[] { reservation.Passenger?.City, reservation.Passenger?.Address }.Where(value => !string.IsNullOrWhiteSpace(value))))
+                                        </span>
+                                    </div>
                                 </td>
                                 <td>
                                     <span class="trip-route">@reservation.Trip?.Departure → @reservation.Trip?.Destination</span>

@@ -121,6 +121,7 @@
                                 <thead>
                                     <tr>
                                         <th>Passager</th>
+                                        <th>Localisation</th>
                                         <th>Places</th>
                                         <th>Total</th>
                                         <th>Statut</th>
@@ -131,7 +132,26 @@
                                     @foreach (var reservation in Model.Reservations.OrderByDescending(r => r.ReservationDate))
                                     {
                                         <tr>
-                                            <td class="passenger-name">@(reservation.Passenger?.FullName ?? "Passager")</td>
+                                            <td>
+                                                <div class="d-flex flex-column gap-1">
+                                                    <span class="passenger-name">@(reservation.Passenger?.FullName ?? "Passager")</span>
+                                                    @if (reservation.Passenger != null)
+                                                    {
+                                                        <a asp-controller="Account"
+                                                           asp-action="Profile"
+                                                           asp-route-id="@reservation.PassengerId"
+                                                           asp-route-tripId="@Model.Id"
+                                                           class="btn btn-sm btn-outline-dark align-self-start">
+                                                            <i class="fas fa-user me-1"></i>Voir profil
+                                                        </a>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @(string.IsNullOrWhiteSpace(reservation.Passenger?.City) && string.IsNullOrWhiteSpace(reservation.Passenger?.Address)
+                                                    ? "Non renseignée"
+                                                    : string.Join(" - ", new[] { reservation.Passenger?.City, reservation.Passenger?.Address }.Where(value => !string.IsNullOrWhiteSpace(value))))
+                                            </td>
                                             <td>@reservation.NumberOfSeats</td>
                                             <td style="font-weight: 600; color: #d99a2b;">@reservation.TotalPrice.ToString("0.00") TND</td>
                                             <td>

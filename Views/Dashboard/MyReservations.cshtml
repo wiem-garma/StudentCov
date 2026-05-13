@@ -62,11 +62,27 @@
                         {
                             <tr>
                                 <td>
-                                    <span class="trip-route">@reservation.Trip?.Departure → @reservation.Trip?.Destination</span>
-                                    <span class="trip-date-info">Réservé le @reservation.ReservationDate.ToString("dd/MM/yyyy HH:mm")</span>
+                                    <div class="d-flex flex-column gap-1">
+                                        <span class="trip-route">@reservation.Trip?.Departure → @reservation.Trip?.Destination</span>
+                                        <span class="trip-date-info">Réservé le @reservation.ReservationDate.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
                                 </td>
                                 <td>@(reservation.Trip?.DepartureTime.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
-                                <td>@(reservation.Trip?.Driver?.FullName ?? "Conducteur")</td>
+                                <td>
+                                    <div class="d-flex flex-column gap-1">
+                                        <span>@(reservation.Trip?.Driver?.FullName ?? "Conducteur")</span>
+                                        @if (reservation.Trip?.DriverId != null)
+                                        {
+                                            <a asp-controller="Account"
+                                               asp-action="Profile"
+                                               asp-route-id="@reservation.Trip.DriverId"
+                                               asp-route-tripId="@reservation.TripId"
+                                               class="btn btn-sm btn-outline-dark align-self-start">
+                                                <i class="fas fa-user me-1"></i>Voir profil
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
                                 <td><span class="badge" style="background: #e7f5f5; color: #136f63;">@reservation.NumberOfSeats</span></td>
                                 <td style="font-weight: 700; color: #d99a2b;">@reservation.TotalPrice.ToString("0.00") TND</td>
                                 <td><span class="badge @Badge(reservation.Status)">@reservation.Status</span></td>

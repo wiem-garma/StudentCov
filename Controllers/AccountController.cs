@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using CovStudent.Data;
 using CovStudent.Models;
 using CovStudent.ViewModels;
 
@@ -10,11 +12,13 @@ public class AccountController : Controller
 {
     private readonly UserManager<AppUser> _userManager;
     private readonly SignInManager<AppUser> _signInManager;
+    private readonly ApplicationDbContext _context;
 
-    public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager)
+    public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ApplicationDbContext context)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _context = context;
     }
 
     [HttpGet]
@@ -77,6 +81,8 @@ public class AccountController : Controller
             FirstName = model.FirstName,
             LastName = model.LastName,
             University = model.University,
+            City = model.City,
+            Address = model.Address,
             PhoneNumber = model.PhoneNumber,
             StudentId = model.StudentId,
             RegistrationDate = DateTime.Now
@@ -100,11 +106,37 @@ public class AccountController : Controller
     }
 
     [Authorize]
-    public async Task<IActionResult> Profile()
+    public async Task<IActionResult> Profile(string? id, int? tripId)
     {
-        var user = await _userManager.GetUserAsync(User);
-        if (user == null)
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser == null)
             return RedirectToAction(nameof(Login));
+
+        AppUser? user = currentUser;
+        var isOwnProfile = string.IsNullOrWhiteSpace(id) || id == currentUser.Id;
+
+        if (!isOwnProfile && !string.IsNullOrWhiteSpace(id) && tripId.HasValue)
+        {
+            var trip = await _context.Trips
+                .Include(t => t.Reservations)
+                .FirstOrDefaultAsync(t => t.Id == tripId.Value);
+
+            var canView = trip != null && (
+                (trip.DriverId == currentUser.Id && trip.Reservations.Any(r => r.PassengerId == id && r.Status != ReservationStatus.Cancelled)) ||
+                (trip.Reservations.Any(r => r.PassengerId == currentUser.Id && r.Status != ReservationStatus.Cancelled) && trip.DriverId == id));
+
+            if (!canView)
+                return Forbid();
+
+            user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            ViewBag.RelationLabel = trip.DriverId == currentUser.Id ? "Passager du trajet" : "Conducteur du trajet";
+        }
+
+        ViewBag.IsOwnProfile = isOwnProfile;
+        ViewBag.BackUrl = tripId.HasValue ? Url.Action("Details", "Trip", new { id = tripId.Value }) : Url.Action("Index", "Dashboard");
 
         return View(user);
     }
@@ -123,6 +155,8 @@ public class AccountController : Controller
             LastName = user.LastName,
             Email = user.Email ?? string.Empty,
             University = user.University,
+            City = user.City,
+            Address = user.Address,
             PhoneNumber = user.PhoneNumber
         };
 
@@ -146,6 +180,8 @@ public class AccountController : Controller
         user.Email = model.Email;
         user.UserName = model.Email;
         user.University = model.University;
+        user.City = model.City;
+        user.Address = model.Address;
         user.PhoneNumber = model.PhoneNumber;
 
         var result = await _userManager.UpdateAsync(user);

@@ -238,14 +238,14 @@
                                         <i class="fas fa-play-circle"></i>Départ
                                     </label>
                                     <input asp-for="Departure" class="form-control form-control-lg" placeholder="Ville de départ" />
-                                    <span asp-validation-for="Departure" class="validation-error"><i class="fas fa-exclamation-circle"></i></span>
+                                        <div class="validation-error"><i class="fas fa-exclamation-circle"></i><span asp-validation-for="Departure"></span></div>
                                 </div>
                                 <div class="form-group">
                                     <label asp-for="Destination" class="form-label">
                                         <i class="fas fa-location-crosshairs"></i>Destination
                                     </label>
                                     <input asp-for="Destination" class="form-control form-control-lg" placeholder="Ville d'arrivée" />
-                                    <span asp-validation-for="Destination" class="validation-error"><i class="fas fa-exclamation-circle"></i></span>
+                                        <div class="validation-error"><i class="fas fa-exclamation-circle"></i><span asp-validation-for="Destination"></span></div>
                                 </div>
                             </div>
                         </div>
@@ -261,14 +261,14 @@
                                         <i class="fas fa-arrow-right"></i>Départ
                                     </label>
                                     <input asp-for="DepartureTime" type="datetime-local" class="form-control form-control-lg" />
-                                    <span asp-validation-for="DepartureTime" class="validation-error"><i class="fas fa-exclamation-circle"></i></span>
+                                    <div class="validation-error"><i class="fas fa-exclamation-circle"></i><span asp-validation-for="DepartureTime"></span></div>
                                 </div>
                                 <div class="form-group">
                                     <label asp-for="ArrivalTime" class="form-label">
                                         <i class="fas fa-arrow-left"></i>Arrivée estimée
                                     </label>
                                     <input asp-for="ArrivalTime" type="datetime-local" class="form-control form-control-lg" />
-                                    <span asp-validation-for="ArrivalTime" class="validation-error"><i class="fas fa-exclamation-circle"></i></span>
+                                    <div class="validation-error"><i class="fas fa-exclamation-circle"></i><span asp-validation-for="ArrivalTime"></span></div>
                                 </div>
                             </div>
                         </div>
@@ -284,14 +284,14 @@
                                         <i class="fas fa-chair"></i>Places disponibles
                                     </label>
                                     <input asp-for="AvailableSeats" type="number" min="1" max="8" class="form-control form-control-lg" />
-                                    <span asp-validation-for="AvailableSeats" class="validation-error"><i class="fas fa-exclamation-circle"></i></span>
+                                    <div class="validation-error"><i class="fas fa-exclamation-circle"></i><span asp-validation-for="AvailableSeats"></span></div>
                                 </div>
                                 <div class="form-group">
                                     <label asp-for="PricePerSeat" class="form-label">
                                         <i class="fas fa-tag"></i>Prix par place (TND)
                                     </label>
                                     <input asp-for="PricePerSeat" type="number" step="0.5" min="0" class="form-control form-control-lg" />
-                                    <span asp-validation-for="PricePerSeat" class="validation-error"><i class="fas fa-exclamation-circle"></i></span>
+                                    <div class="validation-error"><i class="fas fa-exclamation-circle"></i><span asp-validation-for="PricePerSeat"></span></div>
                                 </div>
                             </div>
                         </div>
@@ -306,7 +306,7 @@
                                     <i class="fas fa-compass"></i>Localisation
                                 </label>
                                 <input asp-for="MeetingPoint" class="form-control" placeholder="Ex: devant l'entrée principale" />
-                                <span asp-validation-for="MeetingPoint" class="validation-error"><i class="fas fa-exclamation-circle"></i></span>
+                                <div class="validation-error"><i class="fas fa-exclamation-circle"></i><span asp-validation-for="MeetingPoint"></span></div>
                                 <small style="color: #68706a; margin-top: 6px; display: block;">
                                     Indiquez le lieu exact du point de rendez-vous pour les passagers.
                                 </small>
@@ -323,7 +323,7 @@
                                     <i class="fas fa-pencil"></i>Notes importantes
                                 </label>
                                 <textarea asp-for="Description" rows="4" class="form-control" placeholder="Ex: bagages, horaire flexible, conditions de trajet..."></textarea>
-                                <span asp-validation-for="Description" class="validation-error"><i class="fas fa-exclamation-circle"></i></span>
+                                <div class="validation-error"><i class="fas fa-exclamation-circle"></i><span asp-validation-for="Description"></span></div>
                                 <small style="color: #68706a; margin-top: 6px; display: block;">
                                     Ajoutez des informations utiles pour les passagers (500 caractères max).
                                 </small>

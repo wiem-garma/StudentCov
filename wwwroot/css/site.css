@@ -4,53 +4,43 @@
     --paper: #ffffff;
     --surface: #f4f7f3;
     --surface-strong: #e7eee8;
+    --shadow-sm: 0 8px 24px rgba(23, 32, 28, 0.08);
     --line: #dfe7df;
     --primary: #116b60;
-    --primary-dark: #0b463f;
+    --primary-dark: #0d5148;
+    --accent: #d99a2b;
     --navy: #1d2b3a;
-    --accent: #d79a2b;
-    --coral: #c75d4b;
-    --success: #21845e;
-    --danger: #b9473c;
-    --warning: #d99a2b;
-    --shadow-sm: 0 8px 24px rgba(23, 32, 28, 0.08);
-    --shadow-md: 0 18px 46px rgba(23, 32, 28, 0.12);
+    --coral: #cf5f4f;
 }
 
 * {
     box-sizing: border-box;
-    letter-spacing: 0;
 }
 
 html {
-    min-height: 100%;
+    scroll-behavior: smooth;
 }
 
 body {
-    min-height: 100vh;
     margin: 0;
     color: var(--ink);
     font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--surface);
 }
 
 body.app-layout {
     position: relative;
     overflow-x: hidden;
-    background:
-        radial-gradient(circle at top left, rgba(17, 107, 96, 0.12), transparent 28%),
-        radial-gradient(circle at top right, rgba(215, 154, 43, 0.1), transparent 22%),
-        linear-gradient(180deg, rgba(244, 247, 243, 0.92), rgba(244, 247, 243, 1)),
-        var(--surface);
 }
 
 body.app-layout::before,
 body.app-layout::after {
-    content: "";
     position: fixed;
     z-index: -1;
     pointer-events: none;
     border-radius: 999px;
     filter: blur(8px);
+    content: "";
 }
 
 body.app-layout::before {
@@ -951,29 +941,6 @@ a:hover {
     border-left: 2px dashed var(--line);
 }
 
-.map-panel {
-    min-height: 680px;
-    overflow: hidden;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: white;
-    box-shadow: var(--shadow-sm);
-}
-
-#map {
-    height: 680px;
-    min-height: 420px;
-}
-
-.map-fallback {
-    height: 100%;
-    min-height: 320px;
-    display: grid;
-    place-items: center;
-    color: var(--muted);
-    background: #fbfcf8;
-}
-
 .form-shell {
     width: min(900px, calc(100% - 32px));
     margin: 0 auto;
@@ -1613,10 +1580,6 @@ a:hover {
         min-height: auto;
     }
 
-    .trip-layout {
-        grid-template-columns: 1fr;
-    }
-
     .trip-results {
         max-height: none;
     }
@@ -1692,12 +1655,6 @@ a:hover {
 
     .page-title {
         font-size: 24px;
-    }
-
-    .map-panel,
-    #map {
-        min-height: 440px;
-        height: 440px;
     }
 
     .sticky-panel {
@@ -2127,15 +2084,10 @@ a:hover {
 .quick-action:hover,
 .suggestion-card:hover,
 .btn:hover {
-    gap: 12px !important;
+    transform: translateY(-1px);
 }
 
 .notification-item {
-    padding: 16px;
-    border: 1px solid var(--line);
-    border-left: 4px solid var(--primary);
-    border-radius: 14px;
-    background: white;
     display: flex !important;
     justify-content: space-between !important;
     align-items: flex-start !important;
@@ -2148,28 +2100,59 @@ a:hover {
 }
 
 .conversation-item {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+    padding: 14px !important;
+    border: 1px solid var(--line) !important;
     background: #fff8e8 !important;
+    border-left: 4px solid var(--accent) !important;
     border-left-color: var(--accent) !important;
+    border-radius: 14px !important;
 }
 
 .conversation-item:last-child {
-    padding: 12px 0 !important;
     border-bottom: 1px solid var(--line) !important;
+}
+
+.message-group {
+    width: 100%;
+}
+
+.message-group > div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.message-group.sent > div {
+    margin-left: auto;
+    align-items: flex-end;
+}
+
+.message-group.received > div {
+    margin-right: auto;
+    align-items: flex-start;
+}
 
 .message-bubble {
-    max-width: 65%;
+    width: fit-content;
+    max-width: 100%;
     padding: 12px 16px;
     border-radius: 16px;
     font-size: 14px;
     line-height: 1.5;
-    padding: 28px !important;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .message-group.sent .message-bubble {
     color: white;
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     border-bottom-right-radius: 4px;
-    padding: 28px 0 !important;
+}
 
 .message-group.received .message-bubble {
     color: var(--ink);
@@ -2196,6 +2179,9 @@ a:hover {
     overflow-y: auto !important;
     padding: 20px !important;
     background: #f8faf7 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
 }
 
 .chat-footer {
@@ -2276,8 +2262,7 @@ a:hover {
 
 .empty-state,
 .empty-chat-state,
-.empty-messages,
-.map-fallback {
+.empty-messages {
     text-align: center;
 }
 

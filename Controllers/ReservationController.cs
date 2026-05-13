@@ -47,6 +47,7 @@ namespace CovStudent.Controllers
                 return RedirectToAction("Details", "Trip", new { id = tripId });
             }
 
+            ViewBag.CurrentUser = await _context.Users.FindAsync(userId);
             ViewBag.Trip = trip;
             return View(new Reservation { TripId = tripId });
         }
@@ -73,6 +74,7 @@ namespace CovStudent.Controllers
             if (!ModelState.IsValid)
             {
                 var trip = await _tripService.GetTripByIdAsync(reservation.TripId);
+                ViewBag.CurrentUser = await _context.Users.FindAsync(userId);
                 ViewBag.Trip = trip;
                 return View(reservation);
             }
@@ -85,6 +87,7 @@ namespace CovStudent.Controllers
             if (!success)
             {
                 ModelState.AddModelError("", "Erreur lors de la réservation");
+                ViewBag.CurrentUser = await _context.Users.FindAsync(userId);
                 return View(reservation);
             }
 

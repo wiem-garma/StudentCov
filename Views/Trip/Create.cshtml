@@ -79,14 +79,14 @@
                         <div class="form-grid-2">
                             <div>
                                 <label asp-for="DepartureTime" class="form-label">Date et heure de départ</label>
-                                <input asp-for="DepartureTime" type="datetime-local" class="form-control form-control-lg" />
+                                <input asp-for="DepartureTime" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" step="60" class="form-control form-control-lg" />
                                 <small class="field-hint">Les passagers veulent voir l’horaire dès le premier coup d’œil.</small>
                                 <span asp-validation-for="DepartureTime" class="text-danger small"></span>
                             </div>
 
                             <div>
                                 <label asp-for="ArrivalTime" class="form-label">Arrivée estimée</label>
-                                <input asp-for="ArrivalTime" type="datetime-local" class="form-control form-control-lg" />
+                                <input asp-for="ArrivalTime" type="datetime-local" asp-format="{0:yyyy-MM-ddTHH:mm}" step="60" class="form-control form-control-lg" />
                                 <small class="field-hint">Option utile pour anticiper l’organisation du voyage.</small>
                                 <span asp-validation-for="ArrivalTime" class="text-danger small"></span>
                             </div>

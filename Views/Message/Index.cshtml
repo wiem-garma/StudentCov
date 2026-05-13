@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Conversation";
     var withUser = ViewBag.WithUser as CovStudent.Models.AppUser;
+    var trip = ViewBag.Trip as CovStudent.Models.Trip;
 }
 
 <style>
@@ -72,22 +73,36 @@
     }
 
     .message-group {
-        display: flex;
+        width: 100%;
         margin-bottom: 12px;
-        gap: 8px;
     }
 
-    .message-group.sent {
-        justify-content: flex-end;
+    .message-group > div {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .message-group.sent > div {
+        margin-left: auto;
+        align-items: flex-end;
+    }
+
+    .message-group.received > div {
+        margin-right: auto;
+        align-items: flex-start;
     }
 
     .message-bubble {
-        max-width: 65%;
+        width: fit-content;
+        max-width: 100%;
         padding: 12px 16px;
         border-radius: 14px;
         font-size: 14px;
         line-height: 1.5;
-        word-wrap: break-word;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        word-break: normal;
     }
 
     .message-group.sent .message-bubble {
@@ -229,6 +244,11 @@
 
 <div class="container py-4">
 
+    @if (TempData["Error"] is string errorMessage)
+    {
+        <div class="alert alert-danger mb-3">@errorMessage</div>
+    }
+
     <div class="row justify-content-center">
 
         <div class="col-md-10">
@@ -240,15 +260,19 @@
                     <div class="chat-header-content">
                         <div class="chat-header-avatar">
                             @{
-                                var initial = !string.IsNullOrEmpty(withUser?.FullName) 
-                                    ? withUser.FullName.Substring(0, 1).ToUpper() 
+                                var initial = !string.IsNullOrEmpty(withUser?.FullName)
+                                    ? withUser.FullName.Substring(0, 1).ToUpper()
                                     : "U";
                             }
                             @initial
                         </div>
                         <div class="chat-header-info">
-                            <div class="chat-header-name">@(withUser?.FullName ?? "Utilisateur")</div>
-                            <div class="chat-header-status">En ligne</div>
+                            <div class="chat-header-name">@(withUser?.FullName ?? "Choisissez une conversation")</div>
+                            <div class="chat-header-status">@(withUser != null ? "En ligne" : "Sélectionnez un destinataire")</div>
+                            @if (trip != null)
+                            {
+                                <div class="chat-header-status">@trip.Departure → @trip.Destination</div>
+                            }
                         </div>
                     </div>
                     <a href="@Url.Action("Conversations", "Message")" class="back-button" title="Retour">
@@ -259,7 +283,14 @@
                 <!-- MESSAGES -->
                 <div class="chat-messages" id="chatBox">
 
-                    @if (!Model.Any())
+                    @if (withUser == null)
+                    {
+                        <div class="empty-messages">
+                            <i class="fas fa-comments"></i>
+                            <p>Sélectionnez une conversation pour commencer.</p>
+                        </div>
+                    }
+                    else if (!Model.Any())
                     {
                         <div class="empty-messages">
                             <i class="fas fa-comments"></i>
@@ -286,23 +317,30 @@
                 <!-- INPUT -->
                 <div class="chat-footer">
 
-                    <form asp-action="Send" method="post" class="d-flex gap-2 w-100">
+                    @if (withUser != null)
+                    {
+                        <form asp-action="Send" method="post" class="d-flex gap-2 w-100">
 
-                        <input type="hidden" name="receiverId" value="@ViewBag.WithUser?.Id" />
-                        <input type="hidden" name="tripId" value="@ViewContext.HttpContext.Request.Query["tripId"]" />
+                            <input type="hidden" name="receiverId" value="@ViewBag.WithUser?.Id" />
+                            <input type="hidden" name="tripId" value="@ViewBag.TripId" />
 
-                        <input type="text"
-                               name="content"
-                               class="message-input"
-                               placeholder="Ecrire un message..."
-                               required
-                               autocomplete="off" />
+                            <input type="text"
+                                   name="content"
+                                   class="message-input"
+                                   placeholder="Ecrire un message..."
+                                   required
+                                   autocomplete="off" />
 
-                        <button type="submit" class="btn-send" title="Envoyer">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+                            <button type="submit" class="btn-send" title="Envoyer">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
 
-                    </form>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="text-muted small w-100 text-center py-2">Ouvrez une conversation depuis la liste des messages.</div>
+                    }
 
                 </div>
 

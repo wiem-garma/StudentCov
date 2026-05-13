@@ -193,6 +193,24 @@
                             <input asp-for="University" class="form-control form-modern" placeholder="Optionnel" />
                         </div>
 
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="City" class="form-label">
+                                    <i class="fas fa-location-dot text-gold me-1"></i> Ville
+                                </label>
+                                <input asp-for="City" class="form-control form-modern" placeholder="Tunis" />
+                                <span asp-validation-for="City" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Address" class="form-label">
+                                    <i class="fas fa-house text-gold me-1"></i> Adresse
+                                </label>
+                                <input asp-for="Address" class="form-control form-modern" placeholder="Rue, quartier..." />
+                                <span asp-validation-for="Address" class="text-danger small"></span>
+                            </div>
+                        </div>
+
                         <!-- TELEPHONE -->
                         <div class="mb-4">
                             <label asp-for="PhoneNumber" class="form-label">

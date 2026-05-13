@@ -1,7 +1,10 @@
 ﻿@model CovStudent.Models.AppUser
 
 @{
-    ViewData["Title"] = "Mon profil";
+    var isOwnProfile = ViewBag.IsOwnProfile is bool own && own;
+    var relationLabel = ViewBag.RelationLabel as string;
+    var backUrl = ViewBag.BackUrl as string;
+    ViewData["Title"] = isOwnProfile ? "Mon profil" : "Profil utilisateur";
 }
 
 <style>
@@ -175,8 +178,10 @@
                     <div class="profile-avatar">
                         <i class="fas fa-user"></i>
                     </div>
-                    <h1 class="profile-title">Mon profil</h1>
-                    <p class="profile-subtitle">Vos informations personnelles</p>
+                    <h1 class="profile-title">@(isOwnProfile ? "Mon profil" : Model.FullName)</h1>
+                    <p class="profile-subtitle">
+                        @(isOwnProfile ? "Vos informations personnelles" : (string.IsNullOrWhiteSpace(relationLabel) ? "Profil consulté" : relationLabel))
+                    </p>
                 </div>
 
                 <!-- BODY -->
@@ -232,6 +237,24 @@
 
                         <div class="info-row">
                             <span class="info-label">
+                                <i class="fas fa-location-dot"></i>Ville
+                            </span>
+                            <span class="info-value @(string.IsNullOrEmpty(Model.City) ? "muted" : "")">
+                                @(string.IsNullOrEmpty(Model.City) ? "Non renseignée" : Model.City)
+                            </span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">
+                                <i class="fas fa-house"></i>Adresse
+                            </span>
+                            <span class="info-value @(string.IsNullOrEmpty(Model.Address) ? "muted" : "")">
+                                @(string.IsNullOrEmpty(Model.Address) ? "Non renseignée" : Model.Address)
+                            </span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">
                                 <i class="fas fa-calendar"></i>Membre depuis
                             </span>
                             <span class="info-value">@Model.RegistrationDate.ToString("dd/MM/yyyy")</span>
@@ -240,14 +263,26 @@
 
                     <!-- ACTIONS -->
                     <div class="profile-actions">
-                        <a asp-action="EditProfile" class="btn btn-dark">
-                            <i class="fas fa-pencil"></i>Modifier
-                        </a>
-                        <form asp-action="Logout" method="post" class="m-0">
-                            <button type="submit" class="btn btn-outline-danger w-100">
-                                <i class="fas fa-sign-out-alt"></i>Déconnexion
-                            </button>
-                        </form>
+                        @if (isOwnProfile)
+                        {
+                            <a asp-action="EditProfile" class="btn btn-dark">
+                                <i class="fas fa-pencil"></i>Modifier
+                            </a>
+                            <form asp-action="Logout" method="post" class="m-0">
+                                <button type="submit" class="btn btn-outline-danger w-100">
+                                    <i class="fas fa-sign-out-alt"></i>Déconnexion
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <a href="@backUrl" class="btn btn-dark">
+                                <i class="fas fa-arrow-left"></i>Retour
+                            </a>
+                            <a asp-controller="Message" asp-action="Index" asp-route-userId="@Model.Id" asp-route-tripId="@Context.Request.Query["tripId"]" class="btn btn-outline-dark">
+                                <i class="fas fa-envelope"></i>Message
+                            </a>
+                        }
                     </div>
                 </div>
             </div>

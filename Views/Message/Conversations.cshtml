@@ -4,6 +4,11 @@
 
 <div class="container py-4">
 
+    @if (TempData["Error"] is string errorMessage)
+    {
+        <div class="alert alert-danger mb-3">@errorMessage</div>
+    }
+
     <div class="row">
 
         <!-- LEFT : CONVERSATIONS -->
@@ -23,12 +28,12 @@
                         {
                             foreach (var c in (IEnumerable<dynamic>)ViewBag.Conversations)
                             {
-                                var name = c.UserId ?? "User";
-                                var initial = name.Substring(0, 1).ToUpper();
+                                var name = c.DisplayName ?? "Utilisateur";
+                                var initial = c.Initial ?? "U";
 
                                 <li class="list-group-item conversation-item border-0">
 
-                                    <a href="@Url.Action("Index", "Message", new { userId = c.UserId })"
+                                    <a href="@Url.Action("Index", "Message", new { userId = c.UserId, tripId = c.TripId })"
                                        class="text-decoration-none d-flex align-items-center gap-2">
 
                                         <!-- Avatar -->
@@ -41,6 +46,10 @@
 
                                             <div class="fw-bold text-dark">
                                                 @name
+                                            </div>
+
+                                            <div class="message-preview fw-semibold">
+                                                @c.TripLabel
                                             </div>
 
                                             <div class="message-preview">
@@ -89,7 +98,7 @@
                     <h5>Vos messages</h5>
 
                     <p class="text-muted">
-                        S�lectionnez une conversation pour commencer � discuter
+                        Sélectionnez une conversation pour commencer à discuter
                     </p>
 
                 </div>

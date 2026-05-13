@@ -100,6 +100,26 @@
                 <span asp-validation-for="University" class="text-danger small"></span>
             </div>
 
+            <div class="form-grid-2">
+                <div class="mb-3">
+                    <label asp-for="City" class="form-label">Ville</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-location-dot"></i></span>
+                        <input asp-for="City" class="form-control" placeholder="Tunis" />
+                    </div>
+                    <span asp-validation-for="City" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Address" class="form-label">Adresse</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-house"></i></span>
+                        <input asp-for="Address" class="form-control" placeholder="Rue, quartier, bloc..." />
+                    </div>
+                    <span asp-validation-for="Address" class="text-danger small"></span>
+                </div>
+            </div>
+
             <div class="mb-3">
                 <label asp-for="Password" class="form-label">Mot de passe</label>
                 <div class="input-group">
