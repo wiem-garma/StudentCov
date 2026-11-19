@@ -1,12 +1,10 @@
 ﻿using CovStudent.Data;
+using CovStudent.Exceptions;
 using CovStudent.Models;
 using CovStudent.Services;
-using CovStudent.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using Microsoft.AspNetCore.SignalR;
 
 namespace CovStudent.Controllers
 {
@@ -16,21 +14,23 @@ namespace CovStudent.Controllers
         private readonly IReservationService _reservationService;
         private readonly ITripService _tripService;
         private readonly ApplicationDbContext _context;
-        private readonly IHubContext<NotificationsHub> _hubContext;
+        private readonly INotificationService _notificationService;
 
         public ReservationController(
             IReservationService reservationService,
             ITripService tripService,
             ApplicationDbContext context,
-            IHubContext<NotificationsHub> hubContext)
+            INotificationService notificationService)
         {
             _reservationService = reservationService;
             _tripService = tripService;
             _context = context;
-            _hubContext = hubContext;
+            _notificationService = notificationService;
         }
 
-        // ================= CREATE =================
+        private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // ================= CREATE (GET) =================
 
         public async Task<IActionResult> Create(int tripId)
         {
@@ -39,78 +39,70 @@ namespace CovStudent.Controllers
             if (trip == null)
                 return NotFound();
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (trip.DriverId == userId)
+            // RM-02 : affiché tôt pour l'ergonomie (la vraie vérification est dans le service)
+            if (trip.DriverId == CurrentUserId)
             {
-                TempData["Error"] = "Vous ne pouvez pas réserver votre propre trajet";
+                TempData["Error"] = "Vous ne pouvez pas réserver votre propre trajet.";
                 return RedirectToAction("Details", "Trip", new { id = tripId });
             }
 
-            ViewBag.CurrentUser = await _context.Users.FindAsync(userId);
+            ViewBag.CurrentUser = await _context.Users.FindAsync(CurrentUserId);
             ViewBag.Trip = trip;
-            return View(new Reservation { TripId = tripId });
+            return View(new Reservation { TripId = tripId, NumberOfSeats = 1 });
         }
+
+        // ================= CREATE (POST) — TR-R1 =================
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Reservation reservation)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = CurrentUserId;
 
             if (userId == null)
                 return RedirectToAction("Login", "Account");
 
-            var hasSeats = await _tripService.HasAvailableSeatsAsync(
-                reservation.TripId,
-                reservation.NumberOfSeats
-            );
-
-            if (!hasSeats)
-            {
-                ModelState.AddModelError("", "Nombre de places insuffisant");
-            }
+            // Ces champs ne viennent pas du formulaire : ils sont fixés côté serveur
+            ModelState.Remove(nameof(Reservation.PassengerId));
+            ModelState.Remove(nameof(Reservation.TotalPrice));
 
             if (!ModelState.IsValid)
-            {
-                var trip = await _tripService.GetTripByIdAsync(reservation.TripId);
-                ViewBag.CurrentUser = await _context.Users.FindAsync(userId);
-                ViewBag.Trip = trip;
-                return View(reservation);
-            }
+                return await RetourFormulaire(reservation, userId);
 
             reservation.PassengerId = userId;
-            reservation.ReservationDate = DateTime.Now;
 
-            var success = await _reservationService.CreateReservationAsync(reservation);
-
-            if (!success)
+            try
             {
-                ModelState.AddModelError("", "Erreur lors de la réservation");
-                ViewBag.CurrentUser = await _context.Users.FindAsync(userId);
-                return View(reservation);
+                var success = await _reservationService.CreateReservationAsync(reservation);
+
+                if (!success)
+                    return NotFound();
+            }
+            catch (BusinessRuleException ex)
+            {
+                ModelState.AddModelError("", ex.Message);
+                return await RetourFormulaire(reservation, userId);
             }
 
-            // ================= NOTIFICATION DRIVER =================
+            // Notification au conducteur
+            var trip = await _tripService.GetTripByIdAsync(reservation.TripId);
 
-            var tripEntity = await _tripService.GetTripByIdAsync(reservation.TripId);
-
-            if (tripEntity != null && !string.IsNullOrEmpty(tripEntity.DriverId))
+            if (trip != null && !string.IsNullOrEmpty(trip.DriverId))
             {
                 var passenger = await _context.Users.FindAsync(userId);
 
-                var title = "Nouvelle réservation";
-                var body = $"{passenger?.FullName ?? "Un utilisateur"} a réservé {reservation.NumberOfSeats} place(s)";
-                var link = Url.Action("ReceivedReservations", "Dashboard");
-
-                await SendNotification(tripEntity.DriverId, title, body, link);
+                await SendNotification(
+                    trip.DriverId,
+                    "Nouvelle réservation",
+                    $"{passenger?.FullName ?? "Un utilisateur"} a réservé {reservation.NumberOfSeats} place(s).",
+                    Url.Action("ReceivedReservations", "Dashboard"));
             }
 
-            TempData["Success"] = "Réservation envoyée avec succès";
+            TempData["Success"] = "Réservation envoyée avec succès.";
             return RedirectToAction("MyReservations", "Dashboard");
         }
 
-        // ================= CONFIRM =================
+        // ================= CONFIRM — TR-R2 =================
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -121,27 +113,66 @@ namespace CovStudent.Controllers
             if (reservation == null)
                 return NotFound();
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            var trip = await _tripService.GetTripByIdAsync(reservation.TripId);
-
-            if (trip == null || trip.DriverId != userId)
+            try
+            {
+                await _reservationService.ConfirmReservationAsync(id, CurrentUserId!);
+            }
+            catch (UnauthorizedAccessException)
+            {
                 return Forbid();
-
-            await _reservationService.ConfirmReservationAsync(id);
+            }
+            catch (BusinessRuleException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction("ReceivedReservations", "Dashboard");
+            }
 
             await SendNotification(
                 reservation.PassengerId,
                 "Réservation confirmée",
                 "Votre réservation a été confirmée.",
-                Url.Action("MyReservations", "Dashboard")
-            );
+                Url.Action("MyReservations", "Dashboard"));
 
-            TempData["Success"] = "Réservation confirmée";
+            TempData["Success"] = "Réservation confirmée.";
             return RedirectToAction("ReceivedReservations", "Dashboard");
         }
 
-        // ================= CANCEL =================
+        // ================= REJECT — TR-R3 =================
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Reject(int id)
+        {
+            var reservation = await _reservationService.GetReservationByIdAsync(id);
+
+            if (reservation == null)
+                return NotFound();
+
+            try
+            {
+                await _reservationService.RejectReservationAsync(id, CurrentUserId!);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (BusinessRuleException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction("ReceivedReservations", "Dashboard");
+            }
+
+            await SendNotification(
+                reservation.PassengerId,
+                "Réservation refusée",
+                "Le conducteur a refusé votre réservation.",
+                Url.Action("MyReservations", "Dashboard"));
+
+            TempData["Success"] = "Réservation refusée.";
+            return RedirectToAction("ReceivedReservations", "Dashboard");
+        }
+
+        // ================= CANCEL — TR-R4 / TR-R5 =================
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -149,66 +180,50 @@ namespace CovStudent.Controllers
         {
             var reservation = await _reservationService.GetReservationByIdAsync(id);
 
-            if (reservation == null)
+            if (reservation == null || reservation.Trip == null)
                 return NotFound();
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = CurrentUserId;
 
-            var trip = await _tripService.GetTripByIdAsync(reservation.TripId);
+            // Compatibilité avec les vues existantes : si c'est le conducteur
+            // qui clique sur "Annuler", il s'agit en réalité d'un refus (TR-R3)
+            if (reservation.Trip.DriverId == userId)
+                return await Reject(id);
 
-            if (trip == null || (trip.DriverId != userId && reservation.PassengerId != userId))
-                return Forbid();
-
-            await _reservationService.CancelReservationAsync(id);
-
-            if (trip.DriverId == userId)
+            try
             {
-                await SendNotification(
-                    reservation.PassengerId,
-                    "Réservation annulée",
-                    "Votre réservation a été annulée.",
-                    Url.Action("MyReservations", "Dashboard")
-                );
-
-                TempData["Success"] = "Réservation annulée";
-                return RedirectToAction("ReceivedReservations", "Dashboard");
+                await _reservationService.CancelReservationAsync(id, userId!);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (BusinessRuleException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction("MyReservations", "Dashboard");
             }
 
             await SendNotification(
-                trip.DriverId,
+                reservation.Trip.DriverId,
                 "Réservation annulée",
                 "Un passager a annulé sa réservation.",
-                Url.Action("ReceivedReservations", "Dashboard")
-            );
+                Url.Action("ReceivedReservations", "Dashboard"));
 
-            TempData["Success"] = "Réservation annulée";
+            TempData["Success"] = "Réservation annulée.";
             return RedirectToAction("MyReservations", "Dashboard");
         }
 
-        // ================= HELPER =================
+        // ================= HELPERS =================
 
-        private async Task SendNotification(string userId, string title, string body, string? link)
+        private async Task<IActionResult> RetourFormulaire(Reservation reservation, string userId)
         {
-            var notif = new Notification
-            {
-                RecipientId = userId,
-                Title = title,
-                Body = body,
-                Link = link,
-                CreatedAt = DateTime.Now,
-                IsRead = false
-            };
-
-            _context.Notifications.Add(notif);
-            await _context.SaveChangesAsync();
-
-            await _hubContext.Clients.User(userId)
-                .SendAsync("ReceiveNotification", new
-                {
-                    title,
-                    body,
-                    link
-                });
+            ViewBag.CurrentUser = await _context.Users.FindAsync(userId);
+            ViewBag.Trip = await _tripService.GetTripByIdAsync(reservation.TripId);
+            return View(reservation);
         }
+
+        private Task SendNotification(string userId, string title, string body, string? link)
+            => _notificationService.SendAsync(userId, title, body, link);
     }
 }

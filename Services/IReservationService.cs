@@ -11,7 +11,8 @@ public interface IReservationService
 
     Task<bool> CreateReservationAsync(Reservation reservation);
 
-    Task<bool> ConfirmReservationAsync(int id);
-    Task<bool> CancelReservationAsync(int id);
+    Task<bool> ConfirmReservationAsync(int id, string driverId);
+    Task<bool> RejectReservationAsync(int id, string driverId);
+    Task<bool> CancelReservationAsync(int id, string passengerId);
     Task<bool> CompleteReservationAsync(int id);
 }

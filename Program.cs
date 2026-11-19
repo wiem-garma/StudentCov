@@ -70,6 +70,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddScoped<ITripService, TripService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ================= SIGNALR =================
 

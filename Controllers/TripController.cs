@@ -1,8 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
 using CovStudent.Data;
+using CovStudent.Exceptions;
 using CovStudent.Models;
-using Microsoft.EntityFrameworkCore;
+using CovStudent.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace CovStudent.Controllers;
@@ -10,29 +12,26 @@ namespace CovStudent.Controllers;
 public class TripController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly ITripService _tripService;
+    private readonly INotificationService _notificationService;
 
-    public TripController(ApplicationDbContext context)
+    public TripController(
+        ApplicationDbContext context,
+        ITripService tripService,
+        INotificationService notificationService)
     {
         _context = context;
+        _tripService = tripService;
+        _notificationService = notificationService;
     }
+
+    private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    // ================= RECHERCHE =================
 
     public async Task<IActionResult> Index(string? departure, string? destination, DateTime? date)
     {
-        var query = _context.Trips
-            .Include(t => t.Driver)
-            .Include(t => t.Reservations)
-            .Where(t => t.Status == TripStatus.Active && t.DepartureTime > DateTime.Now);
-
-        if (!string.IsNullOrWhiteSpace(departure))
-            query = query.Where(t => t.Departure.Contains(departure));
-
-        if (!string.IsNullOrWhiteSpace(destination))
-            query = query.Where(t => t.Destination.Contains(destination));
-
-        if (date.HasValue)
-            query = query.Where(t => t.DepartureTime.Date == date.Value.Date);
-
-        var trips = await query.OrderBy(t => t.DepartureTime).ToListAsync();
+        var trips = await _tripService.SearchTripsAsync(departure, destination, date);
 
         ViewBag.Departure = departure;
         ViewBag.Destination = destination;
@@ -41,11 +40,13 @@ public class TripController : Controller
         return View(trips);
     }
 
+    // ================= SUGGESTIONS =================
+
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> GetSmartSuggestions()
     {
-        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var currentUserId = CurrentUserId;
         if (currentUserId == null)
             return Json(new { success = false });
 
@@ -54,44 +55,52 @@ public class TripController : Controller
         var hasUniversity = !string.IsNullOrWhiteSpace(university);
 
         var pastDestinations = await _context.Reservations
-            .Include(r => r.Trip)
             .Where(r => r.PassengerId == currentUserId && r.Trip != null)
             .Select(r => r.Trip!.Destination)
             .Distinct()
             .ToListAsync();
 
-        var query = _context.Trips
+        var suggestionsList = await _context.Trips
+            .AsNoTracking()
             .Include(t => t.Driver)
             .Where(t => t.Status == TripStatus.Active
                 && t.DepartureTime > DateTime.Now
-                && t.DriverId != currentUserId);
-
-        var suggestionsQuery = query.Where(t =>
-            (hasUniversity && t.Destination.Contains(university!)) ||
-            pastDestinations.Contains(t.Destination));
-
-        var suggestionsList = await suggestionsQuery
+                && t.DriverId != currentUserId)
+            .Where(t => (hasUniversity && t.Destination.Contains(university!)) ||
+                        pastDestinations.Contains(t.Destination))
             .OrderBy(t => t.DepartureTime)
             .Take(3)
             .Select(t => new
             {
                 id = t.Id,
-                route = $"{t.Departure} -> {t.Destination}",
-                time = t.DepartureTime.ToString("dd/MM HH:mm"),
-                driver = t.Driver != null ? t.Driver.FullName : "Inconnu",
+                route = t.Departure + " -> " + t.Destination,
+                time = t.DepartureTime,
+                driver = t.Driver != null ? t.Driver.FirstName + " " + t.Driver.LastName : "Inconnu",
                 reason = hasUniversity && t.Destination.Contains(university!)
-                    ? "Trajet vers votre universite"
-                    : "Base sur vos trajets precedents"
+                    ? "Trajet vers votre université"
+                    : "Basé sur vos trajets précédents"
             })
             .ToListAsync();
 
-        return Json(new { success = true, data = suggestionsList });
+        // Formatage de la date en mémoire (pas traduisible en SQL)
+        var data = suggestionsList.Select(s => new
+        {
+            s.id,
+            s.route,
+            time = s.time.ToString("dd/MM HH:mm"),
+            s.driver,
+            s.reason
+        });
+
+        return Json(new { success = true, data });
     }
+
+    // ================= CREATE — TR-T1 =================
 
     [Authorize]
     public IActionResult Create()
     {
-        return View(new Trip { DepartureTime = DateTime.Now.AddHours(1) });
+        return View(new Trip { DepartureTime = DateTime.Now.AddHours(1), AvailableSeats = 1 });
     }
 
     [HttpPost]
@@ -99,38 +108,44 @@ public class TripController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(Trip trip)
     {
-        if (ModelState.IsValid)
+        // Fixé côté serveur, jamais depuis le formulaire
+        ModelState.Remove(nameof(Trip.DriverId));
+
+        if (!ModelState.IsValid)
+            return View(trip);
+
+        trip.DriverId = CurrentUserId!;
+
+        try
         {
-            trip.CreatedAt = DateTime.Now;
-            trip.Status = TripStatus.Active;
-            trip.DriverId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
-
-            _context.Add(trip);
-            await _context.SaveChangesAsync();
-
-            TempData["Success"] = "Trajet publie avec succes.";
-            return RedirectToAction("MyTrips", "Dashboard");
+            await _tripService.AddTripAsync(trip);
+        }
+        catch (BusinessRuleException ex)
+        {
+            ModelState.AddModelError("", ex.Message);
+            return View(trip);
         }
 
-        return View(trip);
+        TempData["Success"] = "Trajet publié avec succès.";
+        return RedirectToAction("MyTrips", "Dashboard");
     }
+
+    // ================= DETAILS =================
 
     public async Task<IActionResult> Details(int id)
     {
-        var trip = await _context.Trips
-            .Include(t => t.Driver)
-            .Include(t => t.Reservations)
-            .ThenInclude(r => r.Passenger)
-            .FirstOrDefaultAsync(t => t.Id == id);
+        var trip = await _tripService.GetTripByIdAsync(id);
 
         if (trip == null)
             return NotFound();
 
-        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var currentUserId = CurrentUserId;
 
         ViewBag.CurrentUserId = currentUserId;
         ViewBag.UserReservation = trip.Reservations
-            .FirstOrDefault(r => r.PassengerId == currentUserId && r.Status != ReservationStatus.Cancelled);
+            .FirstOrDefault(r => r.PassengerId == currentUserId &&
+                                 r.Status != ReservationStatus.Cancelled &&
+                                 r.Status != ReservationStatus.Rejected);
 
         ViewBag.DriverRating = await _context.Reviews
             .Where(r => r.ReviewedUserId == trip.DriverId)
@@ -152,11 +167,14 @@ public class TripController : Controller
         return View(trip);
     }
 
+    // ================= EDIT =================
+
     [Authorize]
     public async Task<IActionResult> Edit(int id)
     {
-        var trip = await _context.Trips.FindAsync(id);
-        if (trip == null || trip.DriverId != User.FindFirstValue(ClaimTypes.NameIdentifier))
+        var trip = await _tripService.GetTripByIdAsync(id);
+
+        if (trip == null || trip.DriverId != CurrentUserId)
             return NotFound();
 
         return View(trip);
@@ -170,67 +188,114 @@ public class TripController : Controller
         if (id != trip.Id)
             return NotFound();
 
-        if (ModelState.IsValid)
+        ModelState.Remove(nameof(Trip.DriverId));
+
+        if (!ModelState.IsValid)
+            return View(trip);
+
+        try
         {
-            try
-            {
-                var existing = await _context.Trips.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
-                if (existing == null || existing.DriverId != User.FindFirstValue(ClaimTypes.NameIdentifier))
-                    return NotFound();
+            var success = await _tripService.UpdateTripAsync(trip, CurrentUserId!);
 
-                trip.DriverId = existing.DriverId;
-                trip.CreatedAt = existing.CreatedAt;
-                trip.Status = existing.Status;
+            if (!success)
+                return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (BusinessRuleException ex)
+        {
+            ModelState.AddModelError("", ex.Message);
+            return View(trip);
+        }
 
-                _context.Update(trip);
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!TripExists(id))
-                    return NotFound();
+        TempData["Success"] = "Trajet mis à jour.";
+        return RedirectToAction("MyTrips", "Dashboard");
+    }
 
-                throw;
-            }
+    // ================= CANCEL — TR-T3 + RM-07 =================
 
-            TempData["Success"] = "Trajet mis a jour.";
+    [HttpPost]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var trip = await _tripService.GetTripByIdAsync(id);
+
+        if (trip == null)
+            return NotFound();
+
+        // Passagers à prévenir (réservations encore actives avant l'annulation)
+        var passagersConcernes = trip.Reservations
+            .Where(r => r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed)
+            .Select(r => r.PassengerId)
+            .Distinct()
+            .ToList();
+
+        try
+        {
+            await _tripService.CancelTripAsync(id, CurrentUserId!);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (BusinessRuleException ex)
+        {
+            TempData["Error"] = ex.Message;
             return RedirectToAction("MyTrips", "Dashboard");
         }
 
-        return View(trip);
+        foreach (var passagerId in passagersConcernes)
+        {
+            await _notificationService.SendAsync(
+                passagerId,
+                "Trajet annulé",
+                $"Le trajet {trip.Departure} → {trip.Destination} du {trip.DepartureTime:dd/MM HH:mm} a été annulé.",
+                Url.Action("MyReservations", "Dashboard"));
+        }
+
+        TempData["Success"] = "Trajet annulé. Les passagers ont été prévenus.";
+        return RedirectToAction("MyTrips", "Dashboard");
     }
+
+    // ================= COMPLETE — TR-T2 + TR-R6 =================
 
     [HttpPost]
     [Authorize]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Complete(int id)
     {
-        var trip = await _context.Trips
-            .Include(t => t.Reservations)
-            .FirstOrDefaultAsync(t => t.Id == id);
+        try
+        {
+            var success = await _tripService.CompleteTripAsync(id, CurrentUserId!);
 
-        if (trip == null || trip.DriverId != User.FindFirstValue(ClaimTypes.NameIdentifier))
-            return NotFound();
+            if (!success)
+                return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (BusinessRuleException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction("MyTrips", "Dashboard");
+        }
 
-        trip.Status = TripStatus.Completed;
-
-        foreach (var reservation in trip.Reservations.Where(r => r.Status == ReservationStatus.Confirmed))
-            reservation.Status = ReservationStatus.Completed;
-
-        await _context.SaveChangesAsync();
-
-        TempData["Success"] = "Trajet marque comme termine.";
+        TempData["Success"] = "Trajet marqué comme terminé.";
         return RedirectToAction("MyTrips", "Dashboard");
     }
+
+    // ================= DELETE =================
 
     [Authorize]
     public async Task<IActionResult> Delete(int id)
     {
-        var trip = await _context.Trips
-            .Include(t => t.Reservations)
-            .FirstOrDefaultAsync(t => t.Id == id);
+        var trip = await _tripService.GetTripByIdAsync(id);
 
-        if (trip == null || trip.DriverId != User.FindFirstValue(ClaimTypes.NameIdentifier))
+        if (trip == null || trip.DriverId != CurrentUserId)
             return NotFound();
 
         return View(trip);
@@ -241,19 +306,24 @@ public class TripController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        var trip = await _context.Trips.FindAsync(id);
-        if (trip != null && trip.DriverId == User.FindFirstValue(ClaimTypes.NameIdentifier))
+        try
         {
-            _context.Trips.Remove(trip);
-            await _context.SaveChangesAsync();
-            TempData["Success"] = "Trajet supprime.";
+            var success = await _tripService.DeleteTripAsync(id, CurrentUserId!);
+
+            if (!success)
+                return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (BusinessRuleException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction("MyTrips", "Dashboard");
         }
 
+        TempData["Success"] = "Trajet supprimé.";
         return RedirectToAction("MyTrips", "Dashboard");
-    }
-
-    private bool TripExists(int id)
-    {
-        return _context.Trips.Any(e => e.Id == id);
     }
 }
