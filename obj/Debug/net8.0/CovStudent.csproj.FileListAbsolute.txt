@@ -8,7 +8,6 @@ C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\Microsoft.Enti
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\appsettings.Development.json
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\appsettings.json
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\CovStudent.staticwebassets.runtime.json
-C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\CovStudent.staticwebassets.endpoints.json
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\Azure.Core.dll
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\Azure.Identity.dll
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\Humanizer.dll
@@ -240,7 +239,6 @@ C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\runtimes\win\l
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\runtimes\win\lib\net7.0\System.Security.Cryptography.ProtectedData.dll
 C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\runtimes\win\lib\net7.0\System.Windows.Extensions.dll
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.csproj.AssemblyReference.cache
-C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\rpswa.dswa.cache.json
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.AssemblyInfoInputs.cache
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.AssemblyInfo.cs
@@ -249,14 +247,9 @@ C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.Mvc
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.MvcApplicationPartsAssemblyInfo.cache
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.RazorAssemblyInfo.cache
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.RazorAssemblyInfo.cs
-C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\rjimswa.dswa.cache.json
-C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
-C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\scopedcss\bundle\CovStudent.styles.css
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets.build.json
-C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets.build.json.cache
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets.development.json
-C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets.build.endpoints.json
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.csproj.Up2Date
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.dll
 C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\refint\CovStudent.dll
@@ -270,4 +263,8 @@ C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\CovStudent.sou
 C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\4e11d907f19e4e0f\CovStudent\obj\Debug\net8.0\CovStudent.dll
 C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\4e11d907f19e4e0f\CovStudent\obj\Debug\net8.0\refint\CovStudent.dll
 C:\Users\CodexSandboxOffline\.codex\.sandbox\cwd\4e11d907f19e4e0f\CovStudent\obj\Debug\net8.0\CovStudent.pdb
-C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets\msbuild.CovStudent.Microsoft.AspNetCore.StaticWebAssets.props
+C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets\msbuild.build.CovStudent.props
+C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets\msbuild.buildMultiTargeting.CovStudent.props
+C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets\msbuild.buildTransitive.CovStudent.props
+C:\Users\ACER\source\repos\CovStudent\CovStudent\obj\Debug\net8.0\staticwebassets.pack.json
