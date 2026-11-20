@@ -1,9 +1,0 @@
-﻿  Identification des projets ├á restaurer...
-  Tous les projets sont ├á jour pour la restauration.
-  CovStudent -> C:\Users\ACER\source\repos\CovStudent\CovStudent\bin\Debug\net8.0\CovStudent.dll
-
-La g├®n├®ration a r├®ussi.
-    0 Avertissement(s)
-    0 Erreur(s)
-
-Temps ├®coul├® 00:01:08.69

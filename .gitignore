@@ -6,6 +6,9 @@
 # Secrets Docker
 .env
 
+# Playwright
+node_modules/
+
 # User-specific files
 *.rsuser
 *.suo
