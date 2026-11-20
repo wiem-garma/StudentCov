@@ -16,6 +16,7 @@ public class NotificationsController : Controller
         _context = context;
     }
 
+    [HttpGet]
     public async Task<IActionResult> Index()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -50,8 +51,9 @@ public class NotificationsController : Controller
 
         await _context.SaveChangesAsync();
 
-        return !string.IsNullOrEmpty(returnUrl)
-            ? Redirect(returnUrl)
+        // Sécurité (OWASP A01) : on ne redirige que vers une URL du site (pas d'open redirect)
+        return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
+            ? LocalRedirect(returnUrl)
             : RedirectToAction(nameof(Index));
     }
 }

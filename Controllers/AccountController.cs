@@ -1,10 +1,11 @@
+using CovStudent.Data;
+using CovStudent.Models;
+using CovStudent.Services;
+using CovStudent.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using CovStudent.Data;
-using CovStudent.Models;
-using CovStudent.ViewModels;
 
 namespace CovStudent.Controllers;
 
@@ -13,13 +14,21 @@ public class AccountController : Controller
     private readonly UserManager<AppUser> _userManager;
     private readonly SignInManager<AppUser> _signInManager;
     private readonly ApplicationDbContext _context;
+    private readonly IAuditService _auditService;
 
-    public AccountController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, ApplicationDbContext context)
+    public AccountController(
+        UserManager<AppUser> userManager,
+        SignInManager<AppUser> signInManager,
+        ApplicationDbContext context,
+        IAuditService auditService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _context = context;
+        _auditService = auditService;
     }
+
+    // ================= LOGIN =================
 
     [HttpGet]
     [AllowAnonymous]
@@ -35,30 +44,55 @@ public class AccountController : Controller
 
         var user = await _userManager.FindByEmailAsync(model.Email);
 
+        // RM-09 : un utilisateur bloqué ne peut pas se connecter
         if (user == null || user.IsBlocked)
         {
+            await _auditService.LogAsync(AuditActions.LoginFailed, "Account", user?.Id,
+                user?.IsBlocked == true ? "Compte bloqué" : "Utilisateur inconnu",
+                userId: user?.Id, userName: model.Email);
+
+            // Message volontairement générique pour un compte inconnu (pas d'énumération des comptes)
             ModelState.AddModelError("", user?.IsBlocked == true
-                ? "Votre compte est bloque. Contactez l'administration."
-                : "Login incorrect");
+                ? "Votre compte est bloqué. Contactez l'administration."
+                : "Email ou mot de passe incorrect.");
             return View(model);
         }
 
+        // lockoutOnFailure: true → verrouillage après 5 échecs (protection brute force)
         var result = await _signInManager.PasswordSignInAsync(
             model.Email,
             model.Password,
             model.RememberMe,
-            false);
+            lockoutOnFailure: true);
 
         if (result.Succeeded)
         {
             user.LastLoginDate = DateTime.Now;
             await _userManager.UpdateAsync(user);
+
+            await _auditService.LogAsync(AuditActions.LoginSuccess, "Account", user.Id,
+                userId: user.Id, userName: user.Email);
+
             return RedirectToAction("Index", "Dashboard");
         }
 
-        ModelState.AddModelError("", "Login incorrect");
+        if (result.IsLockedOut)
+        {
+            await _auditService.LogAsync(AuditActions.LoginFailed, "Account", user.Id,
+                "Compte verrouillé (trop de tentatives)", userId: user.Id, userName: user.Email);
+
+            ModelState.AddModelError("", "Trop de tentatives échouées. Réessayez dans quelques minutes.");
+            return View(model);
+        }
+
+        await _auditService.LogAsync(AuditActions.LoginFailed, "Account", user.Id,
+            "Mot de passe incorrect", userId: user.Id, userName: user.Email);
+
+        ModelState.AddModelError("", "Email ou mot de passe incorrect.");
         return View(model);
     }
+
+    // ================= INSCRIPTION =================
 
     [HttpGet]
     [AllowAnonymous]
@@ -71,8 +105,6 @@ public class AccountController : Controller
     {
         if (!ModelState.IsValid)
             return View(model);
-
-        var isFirstUser = !_userManager.Users.Any();
 
         var user = new AppUser
         {
@@ -88,12 +120,13 @@ public class AccountController : Controller
             RegistrationDate = DateTime.Now
         };
 
+        // Sécurité : plus de "premier inscrit = Admin". Le compte admin est créé par le seed.
         var result = await _userManager.CreateAsync(user, model.Password);
 
         if (result.Succeeded)
         {
-            if (isFirstUser)
-                await _userManager.AddToRoleAsync(user, "Admin");
+            await _auditService.LogAsync(AuditActions.Register, "Account", user.Id,
+                userId: user.Id, userName: user.Email);
 
             await _signInManager.SignInAsync(user, false);
             return RedirectToAction("Index", "Dashboard");
@@ -105,6 +138,9 @@ public class AccountController : Controller
         return View(model);
     }
 
+    // ================= PROFIL =================
+
+    [HttpGet]
     [Authorize]
     public async Task<IActionResult> Profile(string? id, int? tripId)
     {
@@ -121,9 +157,16 @@ public class AccountController : Controller
                 .Include(t => t.Reservations)
                 .FirstOrDefaultAsync(t => t.Id == tripId.Value);
 
-            var canView = trip != null && (
-                (trip.DriverId == currentUser.Id && trip.Reservations.Any(r => r.PassengerId == id && r.Status != ReservationStatus.Cancelled)) ||
-                (trip.Reservations.Any(r => r.PassengerId == currentUser.Id && r.Status != ReservationStatus.Cancelled) && trip.DriverId == id));
+            if (trip == null)
+                return NotFound();
+
+            // On ne voit le profil que d'une personne liée à un trajet commun (réservation non annulée/refusée)
+            bool ReservationValide(Reservation r) =>
+                r.Status != ReservationStatus.Cancelled && r.Status != ReservationStatus.Rejected;
+
+            var canView =
+                (trip.DriverId == currentUser.Id && trip.Reservations.Any(r => r.PassengerId == id && ReservationValide(r))) ||
+                (trip.DriverId == id && trip.Reservations.Any(r => r.PassengerId == currentUser.Id && ReservationValide(r)));
 
             if (!canView)
                 return Forbid();
@@ -136,13 +179,15 @@ public class AccountController : Controller
         }
 
         ViewBag.IsOwnProfile = isOwnProfile;
-        ViewBag.BackUrl = tripId.HasValue ? Url.Action("Details", "Trip", new { id = tripId.Value }) : Url.Action("Index", "Dashboard");
+        ViewBag.BackUrl = tripId.HasValue
+            ? Url.Action("Details", "Trip", new { id = tripId.Value })
+            : Url.Action("Index", "Dashboard");
 
         return View(user);
     }
 
-    [Authorize]
     [HttpGet]
+    [Authorize]
     public async Task<IActionResult> EditProfile()
     {
         var user = await _userManager.GetUserAsync(User);
@@ -163,8 +208,8 @@ public class AccountController : Controller
         return View(model);
     }
 
-    [Authorize]
     [HttpPost]
+    [Authorize]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditProfile(EditProfileViewModel model)
     {
@@ -188,7 +233,7 @@ public class AccountController : Controller
 
         if (result.Succeeded)
         {
-            TempData["SuccessMessage"] = "Profil mis a jour avec succes.";
+            TempData["SuccessMessage"] = "Profil mis à jour avec succès.";
             return RedirectToAction(nameof(Profile));
         }
 
@@ -198,6 +243,9 @@ public class AccountController : Controller
         return View(model);
     }
 
+    // ================= DIVERS =================
+
+    [HttpGet]
     public IActionResult AccessDenied()
     {
         return View();
@@ -207,6 +255,7 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        await _auditService.LogAsync(AuditActions.Logout, "Account");
         await _signInManager.SignOutAsync();
         return RedirectToAction(nameof(Login));
     }

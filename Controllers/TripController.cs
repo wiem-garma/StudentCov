@@ -14,30 +14,37 @@ public class TripController : Controller
     private readonly ApplicationDbContext _context;
     private readonly ITripService _tripService;
     private readonly INotificationService _notificationService;
+    private readonly IAuditService _auditService;
 
     public TripController(
         ApplicationDbContext context,
         ITripService tripService,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IAuditService auditService)
     {
         _context = context;
         _tripService = tripService;
         _notificationService = notificationService;
+        _auditService = auditService;
     }
 
     private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-    // ================= RECHERCHE =================
+    // ================= RECHERCHE (paginée) =================
 
-    public async Task<IActionResult> Index(string? departure, string? destination, DateTime? date)
+    [HttpGet]
+    public async Task<IActionResult> Index(string? departure, string? destination, DateTime? date, int page = 1)
     {
-        var trips = await _tripService.SearchTripsAsync(departure, destination, date);
+        var resultat = await _tripService.SearchTripsAsync(departure, destination, date, page);
 
         ViewBag.Departure = departure;
         ViewBag.Destination = destination;
         ViewBag.Date = date?.ToString("yyyy-MM-dd");
+        ViewBag.Page = resultat.Page;
+        ViewBag.TotalPages = resultat.TotalPages;
+        ViewBag.TotalCount = resultat.TotalCount;
 
-        return View(trips);
+        return View(resultat.Items);
     }
 
     // ================= SUGGESTIONS =================
@@ -97,6 +104,7 @@ public class TripController : Controller
 
     // ================= CREATE — TR-T1 =================
 
+    [HttpGet]
     [Authorize]
     public IActionResult Create()
     {
@@ -126,12 +134,16 @@ public class TripController : Controller
             return View(trip);
         }
 
+        await _auditService.LogAsync(AuditActions.TripCreated, "Trip",
+            trip.Id.ToString(), $"{trip.Departure} → {trip.Destination}");
+
         TempData["Success"] = "Trajet publié avec succès.";
         return RedirectToAction("MyTrips", "Dashboard");
     }
 
     // ================= DETAILS =================
 
+    [HttpGet]
     public async Task<IActionResult> Details(int id)
     {
         var trip = await _tripService.GetTripByIdAsync(id);
@@ -169,6 +181,7 @@ public class TripController : Controller
 
     // ================= EDIT =================
 
+    [HttpGet]
     [Authorize]
     public async Task<IActionResult> Edit(int id)
     {
@@ -210,6 +223,8 @@ public class TripController : Controller
             return View(trip);
         }
 
+        await _auditService.LogAsync(AuditActions.TripUpdated, "Trip", id.ToString());
+
         TempData["Success"] = "Trajet mis à jour.";
         return RedirectToAction("MyTrips", "Dashboard");
     }
@@ -246,6 +261,9 @@ public class TripController : Controller
             TempData["Error"] = ex.Message;
             return RedirectToAction("MyTrips", "Dashboard");
         }
+
+        await _auditService.LogAsync(AuditActions.TripCancelled, "Trip",
+            id.ToString(), $"{passagersConcernes.Count} passager(s) prévenu(s)");
 
         foreach (var passagerId in passagersConcernes)
         {
@@ -284,12 +302,15 @@ public class TripController : Controller
             return RedirectToAction("MyTrips", "Dashboard");
         }
 
+        await _auditService.LogAsync(AuditActions.TripCompleted, "Trip", id.ToString());
+
         TempData["Success"] = "Trajet marqué comme terminé.";
         return RedirectToAction("MyTrips", "Dashboard");
     }
 
     // ================= DELETE =================
 
+    [HttpGet]
     [Authorize]
     public async Task<IActionResult> Delete(int id)
     {
@@ -322,6 +343,8 @@ public class TripController : Controller
             TempData["Error"] = ex.Message;
             return RedirectToAction("MyTrips", "Dashboard");
         }
+
+        await _auditService.LogAsync(AuditActions.TripDeleted, "Trip", id.ToString());
 
         TempData["Success"] = "Trajet supprimé.";
         return RedirectToAction("MyTrips", "Dashboard");

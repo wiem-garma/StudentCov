@@ -243,25 +243,59 @@ public class TripService : ITripService
         return trip.AvailableSeats - placesReservees >= requestedSeats;
     }
 
-    // ================= RECHERCHE =================
+    // ================= RECHERCHE (paginée) =================
 
-    public async Task<IEnumerable<Trip>> SearchTripsAsync(string? departure, string? destination, DateTime? date)
+    public async Task<PagedResult<Trip>> SearchTripsAsync(string? departure, string? destination, DateTime? date,
+                                                          int page = 1, int pageSize = 20)
     {
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var maintenant = DateTime.Now;
+
         var query = _context.Trips
             .AsNoTracking()
-            .Include(t => t.Driver)
-            .Include(t => t.Reservations)
-            .Where(t => t.Status == TripStatus.Active && t.DepartureTime > DateTime.Now);
+            .Where(t => t.Status == TripStatus.Active && t.DepartureTime > maintenant);
 
+        // StartsWith (LIKE 'Tun%') peut utiliser l'index, contrairement à Contains (LIKE '%Tun%')
         if (!string.IsNullOrWhiteSpace(departure))
-            query = query.Where(t => t.Departure.Contains(departure));
+        {
+            var dep = departure.Trim();
+            query = query.Where(t => t.Departure.StartsWith(dep));
+        }
 
         if (!string.IsNullOrWhiteSpace(destination))
-            query = query.Where(t => t.Destination.Contains(destination));
+        {
+            var dest = destination.Trim();
+            query = query.Where(t => t.Destination.StartsWith(dest));
+        }
 
+        // Intervalle [jour, jour+1[ au lieu de .Date == ... : utilise l'index sur DepartureTime
         if (date.HasValue)
-            query = query.Where(t => t.DepartureTime.Date == date.Value.Date);
+        {
+            var debut = date.Value.Date;
+            var fin = debut.AddDays(1);
+            query = query.Where(t => t.DepartureTime >= debut && t.DepartureTime < fin);
+        }
 
-        return await query.OrderBy(t => t.DepartureTime).ToListAsync();
+        var total = await query.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+        page = Math.Clamp(page, 1, totalPages);
+
+        var items = await query
+            .Include(t => t.Driver)
+            .Include(t => t.Reservations)
+            .OrderBy(t => t.DepartureTime)
+            .ThenBy(t => t.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .AsSplitQuery()
+            .ToListAsync();
+
+        return new PagedResult<Trip>
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = total
+        };
     }
 }

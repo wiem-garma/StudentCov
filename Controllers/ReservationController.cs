@@ -15,23 +15,27 @@ namespace CovStudent.Controllers
         private readonly ITripService _tripService;
         private readonly ApplicationDbContext _context;
         private readonly INotificationService _notificationService;
+        private readonly IAuditService _auditService;
 
         public ReservationController(
             IReservationService reservationService,
             ITripService tripService,
             ApplicationDbContext context,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IAuditService auditService)
         {
             _reservationService = reservationService;
             _tripService = tripService;
             _context = context;
             _notificationService = notificationService;
+            _auditService = auditService;
         }
 
         private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         // ================= CREATE (GET) =================
 
+        [HttpGet]
         public async Task<IActionResult> Create(int tripId)
         {
             var trip = await _tripService.GetTripByIdAsync(tripId);
@@ -84,6 +88,10 @@ namespace CovStudent.Controllers
                 return await RetourFormulaire(reservation, userId);
             }
 
+            await _auditService.LogAsync(AuditActions.ReservationCreated, "Reservation",
+                reservation.Id.ToString(),
+                $"Trajet #{reservation.TripId}, {reservation.NumberOfSeats} place(s)");
+
             // Notification au conducteur
             var trip = await _tripService.GetTripByIdAsync(reservation.TripId);
 
@@ -127,6 +135,8 @@ namespace CovStudent.Controllers
                 return RedirectToAction("ReceivedReservations", "Dashboard");
             }
 
+            await _auditService.LogAsync(AuditActions.ReservationConfirmed, "Reservation", id.ToString());
+
             await SendNotification(
                 reservation.PassengerId,
                 "Réservation confirmée",
@@ -161,6 +171,8 @@ namespace CovStudent.Controllers
                 TempData["Error"] = ex.Message;
                 return RedirectToAction("ReceivedReservations", "Dashboard");
             }
+
+            await _auditService.LogAsync(AuditActions.ReservationRejected, "Reservation", id.ToString());
 
             await SendNotification(
                 reservation.PassengerId,
@@ -203,6 +215,8 @@ namespace CovStudent.Controllers
                 TempData["Error"] = ex.Message;
                 return RedirectToAction("MyReservations", "Dashboard");
             }
+
+            await _auditService.LogAsync(AuditActions.ReservationCancelled, "Reservation", id.ToString());
 
             await SendNotification(
                 reservation.Trip.DriverId,

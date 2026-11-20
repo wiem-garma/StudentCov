@@ -7,7 +7,8 @@ public interface ITripService
     Task<IEnumerable<Trip>> GetAllTripsAsync();
     Task<IEnumerable<Trip>> GetAvailableTripsAsync();
     Task<IEnumerable<Trip>> GetTripsByDriverAsync(string driverId);
-    Task<IEnumerable<Trip>> SearchTripsAsync(string? departure, string? destination, DateTime? date);
+    Task<PagedResult<Trip>> SearchTripsAsync(string? departure, string? destination, DateTime? date,
+                                             int page = 1, int pageSize = 20);
     Task<Trip?> GetTripByIdAsync(int id);
 
     Task AddTripAsync(Trip trip);

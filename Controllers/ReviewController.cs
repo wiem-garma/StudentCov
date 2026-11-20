@@ -17,6 +17,7 @@ public class ReviewController : Controller
         _context = context;
     }
 
+    // RM-08 : avis uniquement après une réservation confirmée/terminée, une seule fois, note de 1 à 5
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(int tripId, string reviewedUserId, int rating, string? comment)
@@ -28,7 +29,7 @@ public class ReviewController : Controller
 
         if (rating is < 1 or > 5)
         {
-            TempData["Error"] = "La note doit etre comprise entre 1 et 5.";
+            TempData["Error"] = "La note doit être comprise entre 1 et 5.";
             return RedirectToAction("Details", "Trip", new { id = tripId });
         }
 
@@ -45,7 +46,7 @@ public class ReviewController : Controller
 
         if (!canReview)
         {
-            TempData["Error"] = "Vous pouvez noter uniquement un conducteur avec une reservation confirmee.";
+            TempData["Error"] = "Vous pouvez noter uniquement un conducteur avec une réservation confirmée.";
             return RedirectToAction("Details", "Trip", new { id = tripId });
         }
 
@@ -56,7 +57,7 @@ public class ReviewController : Controller
 
         if (alreadyReviewed)
         {
-            TempData["Error"] = "Vous avez deja note ce trajet.";
+            TempData["Error"] = "Vous avez déjà noté ce trajet.";
             return RedirectToAction("Details", "Trip", new { id = tripId });
         }
 
@@ -83,7 +84,7 @@ public class ReviewController : Controller
             {
                 RecipientId = reviewedUserId,
                 Title = "Nouvelle note",
-                Body = "Un passager a laisse une note sur votre trajet.",
+                Body = "Un passager a laissé une note sur votre trajet.",
                 Link = Url.Action("Details", "Trip", new { id = tripId }),
                 CreatedAt = DateTime.Now
             });
@@ -91,7 +92,7 @@ public class ReviewController : Controller
             await _context.SaveChangesAsync();
         }
 
-        TempData["Success"] = "Merci, votre avis a ete publie.";
+        TempData["Success"] = "Merci, votre avis a été publié.";
         return RedirectToAction("Details", "Trip", new { id = tripId });
     }
 }

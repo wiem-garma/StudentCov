@@ -1,0 +1,31 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+    volumes:
+      - mssqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Server=db,1433;Database=CovStudent;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True"
+      Database__AppliquerMigrations: "true"
+      Seed__AdminPassword: ${ADMIN_PASSWORD}
+      Seed__StudentPassword: ${STUDENT_PASSWORD}
+    ports:
+      - "8080:8080"
+
+volumes:
+  mssqldata:

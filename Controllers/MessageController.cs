@@ -1,6 +1,6 @@
 ﻿using CovStudent.Data;
-using CovStudent.Models;
 using CovStudent.Hubs;
+using CovStudent.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -14,13 +14,23 @@ public class MessageController : Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IHubContext<NotificationsHub> _hubContext;
+    private readonly ILogger<MessageController> _logger;
 
-    public MessageController(ApplicationDbContext context, IHubContext<NotificationsHub> hubContext)
+    public MessageController(
+        ApplicationDbContext context,
+        IHubContext<NotificationsHub> hubContext,
+        ILogger<MessageController> logger)
     {
         _context = context;
         _hubContext = hubContext;
+        _logger = logger;
     }
 
+    // Une réservation "valide" pour discuter : ni annulée, ni refusée
+    private static bool ReservationValide(Reservation r)
+        => r.Status != ReservationStatus.Cancelled && r.Status != ReservationStatus.Rejected;
+
+    [HttpGet]
     public async Task<IActionResult> Index(string? userId, int? tripId)
     {
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -51,7 +61,7 @@ public class MessageController : Controller
         }
 
         var isDriver = trip.DriverId == currentUserId;
-        var isPassenger = trip.Reservations.Any(r => r.PassengerId == currentUserId && r.Status != ReservationStatus.Cancelled);
+        var isPassenger = trip.Reservations.Any(r => r.PassengerId == currentUserId && ReservationValide(r));
 
         if (!isDriver && !isPassenger)
         {
@@ -60,7 +70,7 @@ public class MessageController : Controller
         }
 
         var validReceiver = isDriver
-            ? trip.Reservations.Any(r => r.PassengerId == userId && r.Status != ReservationStatus.Cancelled)
+            ? trip.Reservations.Any(r => r.PassengerId == userId && ReservationValide(r))
             : trip.DriverId == userId;
 
         if (!validReceiver)
@@ -80,12 +90,8 @@ public class MessageController : Controller
             .OrderBy(m => m.SentAt)
             .ToListAsync();
 
-        // mark as read
-        var unread = messages
-            .Where(m => m.ReceiverId == currentUserId && !m.IsRead)
-            .ToList();
-
-        foreach (var m in unread)
+        // Marquer comme lus
+        foreach (var m in messages.Where(m => m.ReceiverId == currentUserId && !m.IsRead))
             m.IsRead = true;
 
         await _context.SaveChangesAsync();
@@ -136,7 +142,7 @@ public class MessageController : Controller
         }
 
         var senderIsDriver = trip.DriverId == senderId;
-        var senderIsPassenger = trip.Reservations.Any(r => r.PassengerId == senderId && r.Status != ReservationStatus.Cancelled);
+        var senderIsPassenger = trip.Reservations.Any(r => r.PassengerId == senderId && ReservationValide(r));
 
         if (!senderIsDriver && !senderIsPassenger)
         {
@@ -145,7 +151,7 @@ public class MessageController : Controller
         }
 
         var receiverIsValid = senderIsDriver
-            ? trip.Reservations.Any(r => r.PassengerId == receiverId && r.Status != ReservationStatus.Cancelled)
+            ? trip.Reservations.Any(r => r.PassengerId == receiverId && ReservationValide(r))
             : trip.DriverId == receiverId;
 
         if (!receiverIsValid)
@@ -154,18 +160,14 @@ public class MessageController : Controller
             return RedirectToAction(nameof(Index), new { userId = receiverId, tripId });
         }
 
-        var message = new Message
+        _context.Messages.Add(new Message
         {
             SenderId = senderId,
             ReceiverId = receiverId,
             Content = content,
             SentAt = DateTime.Now,
             TripId = tripId
-        };
-
-        _context.Messages.Add(message);
-
-        var senderUser = await _context.Users.FindAsync(senderId);
+        });
 
         var notif = new Notification
         {
@@ -183,13 +185,18 @@ public class MessageController : Controller
         try
         {
             await _hubContext.Clients.User(receiverId)
-                .SendAsync("ReceiveNotification", notif);
+                .SendAsync("ReceiveNotification", new { title = notif.Title, body = notif.Body, link = notif.Link });
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // Fiabilité : le message est déjà enregistré, l'échec du temps réel n'est pas bloquant
+            _logger.LogWarning(ex, "Notification temps réel non envoyée à {ReceiverId}", receiverId);
+        }
 
         return RedirectToAction(nameof(Index), new { userId = receiverId, tripId });
     }
 
+    [HttpGet]
     public async Task<IActionResult> Conversations()
     {
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -215,8 +222,14 @@ public class MessageController : Controller
             .Where(u => partnerIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id);
 
+        var tripIds = messages
+            .Where(m => m.TripId != null)
+            .Select(m => m.TripId!.Value)
+            .Distinct()
+            .ToList();
+
         var trips = await _context.Trips
-            .Where(t => messages.Select(m => m.TripId).Contains(t.Id))
+            .Where(t => tripIds.Contains(t.Id))
             .ToDictionaryAsync(t => t.Id);
 
         var conversations = messages

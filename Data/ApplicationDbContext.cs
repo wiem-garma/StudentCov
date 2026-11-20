@@ -11,6 +11,7 @@ public class ApplicationDbContext : IdentityDbContext<AppUser>
     {
     }
 
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<Reservation> Reservations => Set<Reservation>();
     public DbSet<Message> Messages => Set<Message>();
@@ -21,7 +22,8 @@ public class ApplicationDbContext : IdentityDbContext<AppUser>
     {
         base.OnModelCreating(modelBuilder);
 
-        // Decimal precision
+        // ================= PRÉCISION DÉCIMALE =================
+
         modelBuilder.Entity<Trip>()
             .Property(t => t.PricePerSeat)
             .HasPrecision(18, 2);
@@ -30,27 +32,31 @@ public class ApplicationDbContext : IdentityDbContext<AppUser>
             .Property(r => r.TotalPrice)
             .HasPrecision(18, 2);
 
-        // Trip
+        // ================= TRIP =================
+
         modelBuilder.Entity<Trip>()
             .HasOne(t => t.Driver)
             .WithMany(u => u.PublishedTrips)
             .HasForeignKey(t => t.DriverId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Reservation
+        // ================= RESERVATION =================
+
         modelBuilder.Entity<Reservation>()
             .HasOne(r => r.Passenger)
             .WithMany(u => u.Reservations)
             .HasForeignKey(r => r.PassengerId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Fiabilité (FIA-02) : un trajet avec réservations ne peut pas être supprimé en base
         modelBuilder.Entity<Reservation>()
             .HasOne(r => r.Trip)
             .WithMany(t => t.Reservations)
             .HasForeignKey(r => r.TripId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
-        // Message
+        // ================= MESSAGE =================
+
         modelBuilder.Entity<Message>()
             .HasOne(m => m.Sender)
             .WithMany(u => u.SentMessages)
@@ -69,7 +75,8 @@ public class ApplicationDbContext : IdentityDbContext<AppUser>
             .HasForeignKey(m => m.TripId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        // Review
+        // ================= REVIEW =================
+
         modelBuilder.Entity<Review>()
             .HasOne(r => r.Reviewer)
             .WithMany()
@@ -82,14 +89,16 @@ public class ApplicationDbContext : IdentityDbContext<AppUser>
             .HasForeignKey(r => r.ReviewedUserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Notification
+        // ================= NOTIFICATION =================
+
         modelBuilder.Entity<Notification>()
             .HasOne(n => n.Recipient)
             .WithMany(u => u.ReceivedNotifications)
             .HasForeignKey(n => n.RecipientId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // INDEXES
+        // ================= INDEX (performance) =================
+
         modelBuilder.Entity<Trip>()
             .HasIndex(t => t.DepartureTime);
 

@@ -15,8 +15,14 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-// 🔥 IMPORTANT (dev only)
+// Page d'erreur détaillée EF (développement uniquement)
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+// ================= HEALTH CHECK =================
+
+// /health : "Healthy" si la base répond, sinon 503 (fiabilité + Docker)
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ApplicationDbContext>("base-de-donnees");
 
 // ================= MVC =================
 
@@ -27,26 +33,25 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
-    // 🔐 Password (dev config)
-    options.Password.RequireDigit = false;
-    options.Password.RequireLowercase = false;
-    options.Password.RequiredLength = 3;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequireUppercase = false;
+    // 🔐 Politique de mot de passe (OWASP A07)
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequiredLength = 8;
 
-    // 🔐 Lockout
+    // 🔐 Verrouillage après 5 échecs
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
 
-    // 👤 User config
+    // 👤 Utilisateur
     options.User.RequireUniqueEmail = true;
     options.User.AllowedUserNameCharacters =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+";
 
-    // 🔑 SignIn
+    // 🔑 Connexion
     options.SignIn.RequireConfirmedAccount = false;
-
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
@@ -63,14 +68,16 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 
     options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 // ================= SERVICES =================
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITripService, TripService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 // ================= SIGNALR =================
 
@@ -80,7 +87,43 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-// ================= PIPELINE =================
+// ================= DONNÉES DE DÉMONSTRATION =================
+
+// dotnet run -- --seed
+if (args.Contains("--seed"))
+{
+    await DataSeeder.SeedAsync(app.Services, app.Configuration, app.Logger);
+    return;
+}
+
+// ================= MIGRATIONS AUTOMATIQUES (Docker) =================
+
+// Activé par la variable Database__AppliquerMigrations=true (docker-compose)
+if (app.Configuration.GetValue<bool>("Database:AppliquerMigrations"))
+{
+    const int maxTentatives = 10;
+
+    for (var tentative = 1; ; tentative++)
+    {
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await db.Database.MigrateAsync();
+            app.Logger.LogInformation("Migrations appliquées");
+            break;
+        }
+        catch (Exception ex) when (tentative < maxTentatives)
+        {
+            // Fiabilité : la base peut démarrer plus lentement que l'application
+            app.Logger.LogWarning(ex, "Base indisponible (tentative {Tentative}/{Max}), nouvel essai dans 5 s",
+                tentative, maxTentatives);
+            await Task.Delay(TimeSpan.FromSeconds(5));
+        }
+    }
+}
+
+// ================= INITIALISATION DES RÔLES =================
 
 try
 {
@@ -90,10 +133,13 @@ try
     if (!await roleManager.RoleExistsAsync("Admin"))
         await roleManager.CreateAsync(new IdentityRole("Admin"));
 }
-catch
+catch (Exception ex)
 {
-    // Database may not be available yet during first local startup.
+    // Fiabilité : l'application démarre quand même, mais l'erreur est tracée
+    app.Logger.LogWarning(ex, "Initialisation des rôles impossible au démarrage (base indisponible ?)");
 }
+
+// ================= PIPELINE =================
 
 if (app.Environment.IsDevelopment())
 {
@@ -110,11 +156,13 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// 🔐 IMPORTANT ORDER
+// 🔐 L'ordre compte : d'abord qui es-tu, ensuite as-tu le droit
 app.UseAuthentication();
 app.UseAuthorization();
 
 // ================= ROUTES =================
+
+app.MapHealthChecks("/health");
 
 app.MapControllerRoute(
     name: "default",
@@ -122,10 +170,9 @@ app.MapControllerRoute(
 
 app.MapRazorPages();
 
-// ================= SIGNALR =================
-
 app.MapHub<NotificationsHub>("/notificationsHub");
 
-// ================= START =================
-
 app.Run();
+
+// Rend la classe Program visible pour les tests d'intégration (WebApplicationFactory)
+public partial class Program { }

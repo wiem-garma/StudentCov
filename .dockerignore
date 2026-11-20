@@ -1,0 +1,15 @@
+bin/
+obj/
+Tests/
+.vs/
+.vscode/
+.git/
+.env
+*.userbin/
+obj/
+Tests/
+.vs/
+.vscode/
+.git/
+.env
+*.user

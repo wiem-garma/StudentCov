@@ -1,9 +1,13 @@
 @model IEnumerable<CovStudent.Models.Trip>
+@using CovStudent.Models
 
 @{
     ViewData["Title"] = "Trajets";
 
-    var trips = Model ?? Enumerable.Empty<CovStudent.Models.Trip>();
+    var trips = Model ?? Enumerable.Empty<Trip>();
+    int numPage = ViewBag.Page ?? 1;
+    int nbPages = ViewBag.TotalPages ?? 1;
+    int totalTrajets = ViewBag.TotalCount ?? trips.Count();
 }
 
 <div class="page-shell-wide">
@@ -43,9 +47,9 @@
     <div class="trip-layout">
         <section>
             <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
-                <h2 class="section-title mb-0">Résultats (@trips.Count())</h2>
+                <h2 class="section-title mb-0">Résultats (@totalTrajets)</h2>
                 <a asp-action="Index" class="btn btn-outline-dark btn-sm">
-                    <i class="fas fa-rotate-left"></i>Réinitialiser
+                    <i class="fas fa-rotate-left"></i> Réinitialiser
                 </a>
             </div>
 
@@ -64,7 +68,11 @@
 
                 @foreach (var item in trips)
                 {
-                    var remainingSeats = Math.Max(0, item.AvailableSeats - (item.Reservations?.Where(r => r.Status != CovStudent.Models.ReservationStatus.Cancelled).Sum(r => r.NumberOfSeats) ?? 0));
+                    // RM-01 : seules les réservations actives (Pending / Confirmed) occupent des places
+                    var placesOccupees = item.Reservations?
+                        .Where(r => r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed)
+                        .Sum(r => r.NumberOfSeats) ?? 0;
+                    var remainingSeats = Math.Max(0, item.AvailableSeats - placesOccupees);
 
                     <article class="trip-card" data-trip-id="@item.Id">
                         <div class="trip-card-top">
@@ -91,14 +99,39 @@
                             <small class="text-muted">
                                 <i class="fas fa-clock me-1"></i>@item.DepartureTime.ToString("dd/MM HH:mm")
                             </small>
-                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-dark">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-dark"
+                               aria-label="Voir le trajet @item.Departure vers @item.Destination">
                                 Voir
                             </a>
                         </div>
                     </article>
                 }
             </div>
+
+            @if (nbPages > 1)
+            {
+                <nav aria-label="Pagination des trajets" class="d-flex justify-content-center mt-4">
+                    <ul class="pagination mb-0">
+                        <li class="page-item @(numPage <= 1 ? "disabled" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-page="@(numPage - 1)"
+                               asp-route-departure="@ViewBag.Departure" asp-route-destination="@ViewBag.Destination"
+                               asp-route-date="@ViewBag.Date">
+                                <i class="fas fa-chevron-left"></i> Précédent
+                            </a>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Page @(numPage) / @(nbPages)</span>
+                        </li>
+                        <li class="page-item @(numPage >= nbPages ? "disabled" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-page="@(numPage + 1)"
+                               asp-route-departure="@ViewBag.Departure" asp-route-destination="@ViewBag.Destination"
+                               asp-route-date="@ViewBag.Date">
+                                Suivant <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            }
         </section>
     </div>
 </div>
-

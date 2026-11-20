@@ -26,6 +26,7 @@ public class DashboardController : Controller
 
     // ================= DASHBOARD =================
 
+    [HttpGet]
     public async Task<IActionResult> Index()
     {
         var user = await _userManager.GetUserAsync(User);
@@ -59,6 +60,7 @@ public class DashboardController : Controller
 
     // ================= TRIPS =================
 
+    [HttpGet]
     public async Task<IActionResult> MyTrips()
     {
         var userId = _userManager.GetUserId(User);
@@ -73,6 +75,7 @@ public class DashboardController : Controller
 
     // ================= RESERVATIONS =================
 
+    [HttpGet]
     public async Task<IActionResult> MyReservations()
     {
         var userId = _userManager.GetUserId(User);
@@ -85,6 +88,7 @@ public class DashboardController : Controller
         return View(reservations);
     }
 
+    [HttpGet]
     public async Task<IActionResult> ReceivedReservations()
     {
         var userId = _userManager.GetUserId(User);
